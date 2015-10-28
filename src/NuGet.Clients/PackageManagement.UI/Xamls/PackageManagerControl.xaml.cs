@@ -47,6 +47,8 @@ namespace NuGet.PackageManagement.UI
 
         public PackageManagerModel Model { get; }
 
+        private InstalledTabLoader _installedTabLoader;
+
         public PackageManagerControl(
             PackageManagerModel model,
             Configuration.ISettings nugetSettings,
@@ -97,6 +99,16 @@ namespace NuGet.PackageManagement.UI
             // UI is initialized. Start the first search
             _packageList.CheckBoxesEnabled = _topPanel.Filter == Filter.UpdatesAvailable;
             _packageList.IsSolution = this.Model.IsSolution;
+
+            _installedTabLoader = new InstalledTabLoader(
+                ActiveSource,
+                Model.Context.PackageManagerProviders,
+                Model.Context.Projects.ToList(),
+                Model.Context.PackageManager,
+                _windowSearchHost.SearchQuery.SearchString,
+                isSolution: Model.IsSolution,
+                includePrerelease: IncludePrerelease);
+
             SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
             RefreshAvailableUpdatesCount();
             RefreshConsolidatablePackagesCount();
@@ -274,6 +286,8 @@ namespace NuGet.PackageManagement.UI
                             ActiveSource.PackageSource.Source)))
                 {
                     SaveSettings();
+
+                    _installedTabLoader.SetSourceRepository(ActiveSource);
                     SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
                     RefreshAvailableUpdatesCount();
                 }
@@ -539,16 +553,26 @@ namespace NuGet.PackageManagement.UI
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    var option = new PackageLoaderOption(_topPanel.Filter, IncludePrerelease);
-                    var loader = new PackageLoader(
-                        option,
-                        Model.IsSolution,
-                        Model.Context.PackageManager,
-                        Model.Context.Projects,
-                        Model.Context.PackageManagerProviders,
-                        ActiveSource,
-                        searchText);
-                    await loader.InitializeAsync();
+                    ILoader loader;
+                    if (_topPanel.Filter == Filter.Installed)
+                    {
+                        loader = _installedTabLoader;
+                    }
+                    else
+                    {
+                        var option = new PackageLoaderOption(_topPanel.Filter, IncludePrerelease);
+                        var packageLoader = new PackageLoader(
+                            option,
+                            Model.IsSolution,
+                            Model.Context.PackageManager,
+                            Model.Context.Projects,
+                            Model.Context.PackageManagerProviders,
+                            ActiveSource,
+                            searchText);
+                        loader = packageLoader;
+                        await packageLoader.InitializeAsync();
+                    }
+
                     await _packageList.LoadAsync(loader);
                 });
         }
@@ -666,6 +690,8 @@ namespace NuGet.PackageManagement.UI
 
                 Model.Context.SourceProvider.PackageSourceProvider.SaveActivePackageSource(ActiveSource.PackageSource);
                 SaveSettings();
+
+                _installedTabLoader.SetSourceRepository(ActiveSource);
                 SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
                 RefreshAvailableUpdatesCount();
             }
@@ -685,9 +711,11 @@ namespace NuGet.PackageManagement.UI
         /// </summary>
         private void Refresh()
         {
+            _installedTabLoader.Refresh();
+
             if (_topPanel.Filter != Filter.All)
             {
-                // refresh the whole package list
+                // refresh the whole package list                
                 SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
             }
             else
@@ -797,7 +825,9 @@ namespace NuGet.PackageManagement.UI
                 return;
             }
 
-            SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
+            var searchText = _windowSearchHost.SearchQuery.SearchString;
+            _installedTabLoader.SetSearchText(searchText);
+            SearchPackageInActivePackageSource(searchText);
         }
 
         private void CheckboxPrerelease_CheckChanged(object sender, EventArgs e)
@@ -807,9 +837,11 @@ namespace NuGet.PackageManagement.UI
                 return;
             }
 
+            var includePrerelease = _topPanel.CheckboxPrerelease.IsChecked == true;
             RegistrySettingUtility.SetBooleanSetting(
                 Constants.IncludePrereleaseRegistryName,
-                _topPanel.CheckboxPrerelease.IsChecked == true);
+                includePrerelease);
+            _installedTabLoader.SetIncludePrerelease(includePrerelease);
             SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
             RefreshAvailableUpdatesCount();
         }
@@ -836,12 +868,16 @@ namespace NuGet.PackageManagement.UI
 
         public void ClearSearch()
         {
-            SearchPackageInActivePackageSource(_windowSearchHost.SearchQuery.SearchString);
+            var searchText = _windowSearchHost.SearchQuery.SearchString;
+            _installedTabLoader.SetSearchText(searchText);
+            SearchPackageInActivePackageSource(searchText);
         }
 
         public IVsSearchTask CreateSearch(uint dwCookie, IVsSearchQuery pSearchQuery, IVsSearchCallback pSearchCallback)
         {
-            SearchPackageInActivePackageSource(pSearchQuery.SearchString);
+            var searchText = pSearchQuery.SearchString;
+            _installedTabLoader.SetSearchText(searchText);
+            SearchPackageInActivePackageSource(searchText);
             return null;
         }
 
