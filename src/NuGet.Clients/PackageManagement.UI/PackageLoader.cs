@@ -683,23 +683,25 @@ namespace NuGet.PackageManagement.UI
 
                 searchResultPackage.Versions = versionList;
 
-                searchResultPackage.BackgroundLoader = new Lazy<Task<BackgroundLoaderResult>>(
-                    () => BackgroundLoad(searchResultPackage, versionList));
+                searchResultPackage.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(
+                    new Lazy<Task<BackgroundLoaderResult>>(
+                        () => BackgroundLoad(searchResultPackage, versionList)));
 
                 if (!_isSolution && _packageManagerProviders.Any())
                 {
-                    searchResultPackage.ProvidersLoader = new Lazy<Task<AlternativePackageManagerProviders>>(
+                    searchResultPackage.ProvidersLoader = new BackgroundLoader<AlternativePackageManagerProviders>(
+                        new Lazy<Task<AlternativePackageManagerProviders>>(
                         () => AlternativePackageManagerProviders.CalculateAlternativePackageManagersAsync(
                             _packageManagerProviders,
                             searchResultPackage.Id,
-                            _projects[0]));
+                            _projects[0])));
                 }
 
                 // filter out prerelease version when needed.
                 if (searchResultPackage.Version.IsPrerelease &&
                     !_option.IncludePrerelease)
                 {
-                    var value = await searchResultPackage.BackgroundLoader.Value;
+                    var value = await searchResultPackage.BackgroundLoader.GetResult();
 
                     if (value.Status == PackageStatus.NotInstalled)
                     {
@@ -709,7 +711,7 @@ namespace NuGet.PackageManagement.UI
 
                 if (_option.Filter == Filter.UpdatesAvailable)
                 {
-                    var value = await searchResultPackage.BackgroundLoader.Value;
+                    var value = await searchResultPackage.BackgroundLoader.GetResult();
 
                     if (value.Status != PackageStatus.UpdateAvailable)
                     {

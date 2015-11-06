@@ -6,28 +6,55 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Threading.Tasks;
-using System.Windows;
 using NuGet.Protocol.VisualStudio;
 using NuGet.Versioning;
-using NuGet.VisualStudio;
 
 namespace NuGet.PackageManagement.UI
 {
     // This is the model class behind the package items in the infinite scroll list.
     // Some of its properties, such as Latest Version, Status, are fetched on-demand in the background.
     public class PackageItemListViewModel : INotifyPropertyChanged
-    {        
+    {
         public event PropertyChangedEventHandler PropertyChanged;
 
         public string Id { get; set; }
 
         public NuGetVersion Version { get; set; }
 
+        private BackgroundLoader<MetadataLoaderResult> _metadataLoader;
+
+        public BackgroundLoader<MetadataLoaderResult> MetadataLoader
+        {
+            set
+            {
+                _metadataLoader = value;
+
+                OnPropertyChanged(nameof(Author));
+            }
+        }
+
         private string _author;
+
         public string Author
         {
             get
             {
+                if (_metadataLoader != null && !_metadataLoader.LoaderHasBeenRun)
+                {
+                    _metadataLoader.LoaderHasBeenRun = true;
+                    Task.Run(async () =>
+                    {
+                        var result = await _metadataLoader.GetResult();
+
+                        await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                        Author = result.Author;
+                        DownloadCount = result.DownloadCount;
+                        IconUrl = result.IconUrl;
+                        Summary = result.Summary;
+                    });
+                }
+
                 return _author;
             }
             set
@@ -38,7 +65,8 @@ namespace NuGet.PackageManagement.UI
         }
 
         // The installed version of the package.
-        private NuGetVersion _installedVersion;        
+        private NuGetVersion _installedVersion;
+
         public NuGetVersion InstalledVersion
         {
             get
@@ -53,11 +81,12 @@ namespace NuGet.PackageManagement.UI
                     OnPropertyChanged(nameof(InstalledVersion));
                 }
             }
-        }        
+        }
 
         // The version that can be installed or updated to. It is null
         // if the installed version is already the latest.
         private NuGetVersion _latestVersion;
+
         public NuGetVersion LatestVersion
         {
             get
@@ -148,23 +177,37 @@ namespace NuGet.PackageManagement.UI
             }
         }
 
-        public string Summary { get; set; }
+        private string _summary;
 
-        // Indicates whether the background loader has started.
-        private bool _backgroundLoaderRun;
+        public string Summary
+        {
+            get
+            {
+                return _summary;
+            }
+            set
+            {
+                if (_summary != value)
+                {
+                    _summary = value;
+                    OnPropertyChanged(nameof(Summary));
+                }
+            }
+        }
 
         private PackageStatus _status;
+
         public PackageStatus Status
         {
             get
             {
-                if (!_backgroundLoaderRun)
+                if (_backgroundLoader != null && !_backgroundLoader.LoaderHasBeenRun)
                 {
-                    _backgroundLoaderRun = true;
+                    _backgroundLoader.LoaderHasBeenRun = true;
 
                     Task.Run(async () =>
                     {
-                        var result = await BackgroundLoader.Value;
+                        var result = await BackgroundLoader.GetResult();
 
                         await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -189,21 +232,19 @@ namespace NuGet.PackageManagement.UI
             }
         }
 
-
-        private bool _providersLoaderStarted;
-
         private AlternativePackageManagerProviders _providers;
+
         public AlternativePackageManagerProviders Providers
         {
             get
             {
-                if (!_providersLoaderStarted && ProvidersLoader != null)
+                if (_providersLoader != null && !_providersLoader.LoaderHasBeenRun)
                 {
-                    _providersLoaderStarted = true;
+                    _providersLoader.LoaderHasBeenRun = true;
                     Task.Run(async () =>
                     {
-                        var result = await ProvidersLoader.Value;
-                        
+                        var result = await _providersLoader.GetResult();
+
                         await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                         Providers = result;
@@ -220,30 +261,23 @@ namespace NuGet.PackageManagement.UI
             }
         }
 
+        private BackgroundLoader<AlternativePackageManagerProviders> _providersLoader;
 
-        private Lazy<Task<AlternativePackageManagerProviders>> _providersLoader;
-        internal Lazy<Task<AlternativePackageManagerProviders>> ProvidersLoader
+        internal BackgroundLoader<AlternativePackageManagerProviders> ProvidersLoader
         {
-            get
-            {
-                return _providersLoader;
-            }
-
             set
             {
                 if (_providersLoader != value)
                 {
-                    _providersLoaderStarted = false;
+                    _providersLoader = value;
+                    OnPropertyChanged(nameof(Providers));
                 }
-
-                _providersLoader = value;
-                OnPropertyChanged(nameof(Providers));
             }
         }
 
-        private Lazy<Task<BackgroundLoaderResult>> _backgroundLoader;
+        private BackgroundLoader<BackgroundLoaderResult> _backgroundLoader;
 
-        internal Lazy<Task<BackgroundLoaderResult>> BackgroundLoader
+        internal BackgroundLoader<BackgroundLoaderResult> BackgroundLoader
         {
             get
             {
@@ -254,16 +288,29 @@ namespace NuGet.PackageManagement.UI
             {
                 if (_backgroundLoader != value)
                 {
-                    _backgroundLoaderRun = false;
+                    _backgroundLoader = value;
+                    OnPropertyChanged(nameof(Status));
                 }
-
-                _backgroundLoader = value;
-
-                OnPropertyChanged(nameof(Status));
             }
         }
 
-        public Uri IconUrl { get; set; }
+        private Uri _iconUrl;
+
+        public Uri IconUrl
+        {
+            get
+            {
+                return _iconUrl;
+            }
+            set
+            {
+                if (_iconUrl != value)
+                {
+                    _iconUrl = value;
+                    OnPropertyChanged(nameof(IconUrl));
+                }
+            }
+        }
 
         public Lazy<Task<IEnumerable<VersionInfo>>> Versions { get; set; }
 

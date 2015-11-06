@@ -732,10 +732,11 @@ namespace NuGet.PackageManagement.UI
                         continue;
                     }
 
-                    package.BackgroundLoader = new Lazy<Task<BackgroundLoaderResult>>(async () => await GetPackageInfo(
-                       package.Id,
-                       installedPackages,
-                       package.Versions));
+                    package.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(                        
+                        new Lazy<Task<BackgroundLoaderResult>>(() => GetPackageInfo(
+                            package.Id,
+                            installedPackages,
+                            package.Versions)));
                 }
             }
 

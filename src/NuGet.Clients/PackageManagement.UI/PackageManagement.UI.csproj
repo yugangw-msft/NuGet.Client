@@ -75,6 +75,7 @@
     <Compile Include="Actions\UIActionEngine.cs" />
     <Compile Include="Actions\ProjectContext.cs" />
     <Compile Include="Actions\UpdatePreviewResult.cs" />
+    <Compile Include="BackgroundLoader.cs" />
     <Compile Include="Common\IOptionsPageActivator.cs" />
     <Compile Include="Common\NuGetEvent.cs" />
     <Compile Include="Common\NuGetEventTrigger.cs" />
@@ -119,6 +120,7 @@
     <Compile Include="LoadResult.cs" />
     <Compile Include="Models\BackgroundLoaderResult.cs" />
     <Compile Include="Models\AlternativePackageManagerProviders.cs" />
+    <Compile Include="Models\MetadataLoaderResult.cs" />
     <Compile Include="Models\PackageItemListViewModel.cs" />
     <Compile Include="Models\PackageStatus.cs" />
     <Compile Include="Models\SearchResult.cs" />

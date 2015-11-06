@@ -67,8 +67,6 @@ namespace NuGet.PackageManagement.UI
 
         // data
         private InstalledPackages _installedPackages;
-
-        private List<UISearchMetadata> _packagesWithMetadata;
         private List<PackageItemListViewModel> _packages;
         private List<PackageItemListViewModel> _searchResult;
 
@@ -97,17 +95,17 @@ namespace NuGet.PackageManagement.UI
                     searchText);
         }
 
-        // callsed after s
+        // callsed after source repository is changed.
         public void SetSourceRepository(
             SourceRepository sourceRepository)
         {
             _sourceRepository = sourceRepository;
 
-            _packagesWithMetadata = null;
             _packages = null;
             _searchResult = null;
         }
 
+        // callsed after include prerelease checkbox is checked/unchecked.
         public void SetIncludePrerelease(
             bool includePrerelease)
         {
@@ -118,7 +116,6 @@ namespace NuGet.PackageManagement.UI
 
             _includePrerelease = includePrerelease;
 
-            _packagesWithMetadata = null;
             _packages = null;
             _searchResult = null;
         }
@@ -144,8 +141,7 @@ namespace NuGet.PackageManagement.UI
         // called after user action is executed
         public void Refresh()
         {
-            _installedPackages = null;
-            _packagesWithMetadata = null;
+            _installedPackages = null;            
             _packages = null;
             _searchResult = null;
         }
@@ -160,6 +156,7 @@ namespace NuGet.PackageManagement.UI
                 _installedPackages = await installedPackagesLoader.GetInstalledPackagesAsync(cancellationToken);
             }
 
+            /* !!!
             if (_packagesWithMetadata == null)
             {
                 var packageMetadataLoader = new PackageMetadataLoader(
@@ -169,7 +166,7 @@ namespace NuGet.PackageManagement.UI
                 _packagesWithMetadata = await packageMetadataLoader.GetPackagesWithMetadataAsync(
                     _installedPackages,
                     cancellationToken);
-            }
+            } */
 
             if (_packages == null)
             {
@@ -179,7 +176,11 @@ namespace NuGet.PackageManagement.UI
                     _packageManagerProviders,
                     isSolution: _isSolution,
                     includePrerelease: _includePrerelease);
-                _packages = packageListLoader.GetPackagesAsync(_packagesWithMetadata, cancellationToken);
+                _packages = await packageListLoader.GetPackagesAsync2(
+                    _installedPackages,
+                    _packageManager,
+                    _sourceRepository,
+                    cancellationToken);
             }
 
             if (_searchResult == null)
