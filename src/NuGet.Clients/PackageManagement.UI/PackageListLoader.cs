@@ -35,92 +35,7 @@ namespace NuGet.PackageManagement.UI
             _includePrerelease = includePrerelease;
         }
 
-        public List<PackageItemListViewModel> GetPackagesAsync(
-            List<UISearchMetadata> packagesWithMetadata,
-            CancellationToken cancellationToken)
-        {
-            List<PackageItemListViewModel> packages = new List<PackageItemListViewModel>();
-            foreach (var packageWithMetadata in packagesWithMetadata)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var package = new PackageItemListViewModel();
-                package.Id = packageWithMetadata.Identity.Id;
-                package.Version = packageWithMetadata.Identity.Version;
-                package.IconUrl = packageWithMetadata.IconUrl;
-                package.Author = packageWithMetadata.Author;
-                package.DownloadCount = packageWithMetadata.DownloadCount;
-
-                HashSet<NuGetVersion> installedVersions;
-                if (!_installedPackages.TryGetValue(
-                    package.Id,
-                    out installedVersions))
-                {
-                    installedVersions = new HashSet<NuGetVersion>();
-                }
-
-                // filter out prerelease version when needed.
-                if (package.Version.IsPrerelease && !_includePrerelease)
-                {
-                    // but it should be kept if it is installed
-                    if (installedVersions.Contains(package.Version))
-                    {
-                        // keep this prerelease package
-                    }
-                    else
-                    {
-                        // skip this prerelease package
-                        continue;
-                    }
-                }
-
-                if (!_isSolution)
-                {
-                    if (installedVersions.Count == 1)
-                    {
-                        package.InstalledVersion = installedVersions.First();
-                    }
-                }
-
-                var versionList = new Lazy<Task<IEnumerable<VersionInfo>>>(async () =>
-                {
-                    var versions = await packageWithMetadata.Versions.Value;
-                    var filteredVersions = versions
-                            .Where(v => !v.Version.IsPrerelease || _includePrerelease)
-                            .ToList();
-
-                    if (!filteredVersions.Any(v => v.Version == package.Version))
-                    {
-                        filteredVersions.Add(new VersionInfo(package.Version, downloadCount: null));
-                    }
-
-                    return filteredVersions;
-                });
-
-                package.Versions = versionList;
-
-                package.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(                    
-                    new Lazy<Task<BackgroundLoaderResult>>(
-                        () => BackgroundLoad(package, versionList)));
-
-                if (!_isSolution && _packageManagerProviders.Any())
-                {
-                    package.ProvidersLoader = new BackgroundLoader<AlternativePackageManagerProviders>(
-                        new Lazy<Task<AlternativePackageManagerProviders>>(
-                        () => AlternativePackageManagerProviders.CalculateAlternativePackageManagersAsync(
-                            _packageManagerProviders,
-                            package.Id,
-                            _projects[0])));
-                }
-
-                package.Summary = packageWithMetadata.Summary;
-                packages.Add(package);
-            }
-
-            return packages;
-        }
-
-        public async Task<List<PackageItemListViewModel>> GetPackagesAsync2(
+        public async Task<List<PackageItemListViewModel>> GetPackagesAsync(
             InstalledPackages installedPackages,
             NuGetPackageManager packageManager,
             SourceRepository sourceRepository,
@@ -164,10 +79,9 @@ namespace NuGet.PackageManagement.UI
                 var id = pair.Key;
                 HashSet<NuGetVersion> installedVersions = pair.Value;
 
-                var package = new PackageItemListViewModel();
+                var package = new PackageItemListViewModel(_includePrerelease);
                 package.Id = id;
                 package.Version = installedVersions.Max();
-                                
                 package.MetadataLoader = new BackgroundLoader<MetadataLoaderResult>(
                     new Lazy<Task<MetadataLoaderResult>>(() =>
                     {
@@ -176,7 +90,7 @@ namespace NuGet.PackageManagement.UI
                             metadataResource,
                             new PackageIdentity(package.Id, package.Version),
                             CancellationToken.None);
-                    }));                
+                    }));
 
                 if (!_isSolution)
                 {
@@ -186,35 +100,19 @@ namespace NuGet.PackageManagement.UI
                     }
                 }
 
-                /* !!!
-                var versionList = new Lazy<Task<IEnumerable<VersionInfo>>>(async () =>
-                {
-                    var versions = await installedPackage.Versions.Value;
-                    var filteredVersions = versions
-                            .Where(v => !v.Version.IsPrerelease || _includePrerelease)
-                            .ToList();
-
-                    if (!filteredVersions.Any(v => v.Version == package.Version))
-                    {
-                        filteredVersions.Add(new VersionInfo(package.Version, downloadCount: null));
-                    }
-
-                    return filteredVersions;
-                });
-
-                package.Versions = versionList;
-
-                package.BackgroundLoader = new Lazy<Task<BackgroundLoaderResult>>(
-                    () => BackgroundLoad(package, versionList));
+                package.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(                    
+                    new Lazy<Task<BackgroundLoaderResult>>(
+                        () => BackgroundLoad(package)));
 
                 if (!_isSolution && _packageManagerProviders.Any())
                 {
-                    package.ProvidersLoader = new Lazy<Task<AlternativePackageManagerProviders>>(
+                    package.ProvidersLoader = new BackgroundLoader<AlternativePackageManagerProviders>(
+                        new Lazy<Task<AlternativePackageManagerProviders>>(
                         () => AlternativePackageManagerProviders.CalculateAlternativePackageManagersAsync(
                             _packageManagerProviders,
                             package.Id,
-                            _projects[0]));
-                } */
+                            _projects[0])));
+                }
 
                 packages.Add(package);
             }
@@ -222,16 +120,15 @@ namespace NuGet.PackageManagement.UI
             return packages;
         }
 
-
         // Load info in the background
-        private async Task<BackgroundLoaderResult> BackgroundLoad(
-            PackageItemListViewModel package, Lazy<Task<IEnumerable<VersionInfo>>> versions)
+        public async Task<BackgroundLoaderResult> BackgroundLoad(
+            PackageItemListViewModel package)
         {
             HashSet<NuGetVersion> installedVersions;
             if (_installedPackages.TryGetValue(package.Id, out installedVersions))
             {
-                var versionsUnwrapped = await versions.Value;
-                var highestAvailableVersion = versionsUnwrapped
+                var versions = await package.GetVersionsAsync();
+                var highestAvailableVersion = versions
                     .Select(v => v.Version)
                     .Max();
 
@@ -267,7 +164,7 @@ namespace NuGet.PackageManagement.UI
     }
 
     // supports offline
-    public class InstalledTabMetadataLoader 
+    public class InstalledTabMetadataLoader
     {
         /// <summary>
         /// Get the metadata of an installed package.
@@ -341,6 +238,8 @@ namespace NuGet.PackageManagement.UI
             CancellationToken cancellationToken)
         {
             UIPackageMetadata packageMetadata = null;
+            IEnumerable<VersionInfo> versions = Enumerable.Empty<VersionInfo>();
+
             if (localResource != null)
             {
                 var localMetadata = await localResource.GetMetadata(
@@ -349,44 +248,8 @@ namespace NuGet.PackageManagement.UI
                     includeUnlisted: true,
                     token: cancellationToken);
                 packageMetadata = localMetadata.FirstOrDefault(p => p.Identity.Version == identity.Version);
+                versions = localMetadata.Select(p => new VersionInfo(p.Identity.Version, p.DownloadCount));
             }
-
-            string summary = string.Empty;
-            string title = identity.Id;
-            string author = string.Empty;
-            if (packageMetadata != null)
-            {
-                summary = packageMetadata.Summary;
-                if (string.IsNullOrEmpty(summary))
-                {
-                    summary = packageMetadata.Description;
-                }
-                if (!string.IsNullOrEmpty(packageMetadata.Title))
-                {
-                    title = packageMetadata.Title;
-                }
-
-                author = string.Join(", ", packageMetadata.Authors);
-            }
-
-            return new MetadataLoaderResult(
-                author, 
-                packageMetadata?.IconUrl, 
-                packageMetadata?.DownloadCount,
-                summary);
-        }
-
-        private static async Task<MetadataLoaderResult> GetPackageMetadataFromMetadataResourceAsync(
-            UIMetadataResource metadataResource,
-            PackageIdentity identity,
-            CancellationToken cancellationToken)
-        {
-            var uiPackageMetadatas = await metadataResource.GetMetadata(
-                identity.Id,
-                includePrerelease: true,
-                includeUnlisted: false,
-                token: cancellationToken);
-            var packageMetadata = uiPackageMetadatas.FirstOrDefault(p => p.Identity.Version == identity.Version);
 
             string summary = string.Empty;
             string title = identity.Id;
@@ -410,7 +273,47 @@ namespace NuGet.PackageManagement.UI
                 author,
                 packageMetadata?.IconUrl,
                 packageMetadata?.DownloadCount,
-                summary);
+                summary,
+                versions);
+        }
+
+        private static async Task<MetadataLoaderResult> GetPackageMetadataFromMetadataResourceAsync(
+            UIMetadataResource metadataResource,
+            PackageIdentity identity,
+            CancellationToken cancellationToken)
+        {
+            var uiPackageMetadatas = await metadataResource.GetMetadata(
+                identity.Id,
+                includePrerelease: true,
+                includeUnlisted: false,
+                token: cancellationToken);
+            var packageMetadata = uiPackageMetadatas.FirstOrDefault(p => p.Identity.Version == identity.Version);
+            var versions = uiPackageMetadatas.Select(p => new VersionInfo(p.Identity.Version, p.DownloadCount));
+
+            string summary = string.Empty;
+            string title = identity.Id;
+            string author = string.Empty;
+            if (packageMetadata != null)
+            {
+                summary = packageMetadata.Summary;
+                if (string.IsNullOrEmpty(summary))
+                {
+                    summary = packageMetadata.Description;
+                }
+                if (!string.IsNullOrEmpty(packageMetadata.Title))
+                {
+                    title = packageMetadata.Title;
+                }
+
+                author = string.Join(", ", packageMetadata.Authors);
+            }
+
+            return new MetadataLoaderResult(
+                author,
+                packageMetadata?.IconUrl,
+                packageMetadata?.DownloadCount,
+                summary,
+                versions);
         }
     }
 }

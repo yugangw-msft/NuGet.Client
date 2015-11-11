@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using NuGet.Protocol.VisualStudio;
 using NuGet.Versioning;
@@ -17,6 +18,11 @@ namespace NuGet.PackageManagement.UI
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public PackageItemListViewModel(bool includePrerelease)
+        {
+            _includePrerelease = includePrerelease;
+        }
+
         public string Id { get; set; }
 
         public NuGetVersion Version { get; set; }
@@ -28,21 +34,27 @@ namespace NuGet.PackageManagement.UI
             set
             {
                 _metadataLoader = value;
+                _metadataLoadTask = null;
 
                 OnPropertyChanged(nameof(Author));
             }
         }
 
-        private string _author;
+        private object _metadataLoadTaskLock = new object();
+        private Task _metadataLoadTask;
 
-        public string Author
+        private Task LoadMetadataAsync()
         {
-            get
+            if (_metadataLoader == null)
             {
-                if (_metadataLoader != null && !_metadataLoader.LoaderHasBeenRun)
+                return Task.FromResult(0);
+            }
+
+            lock (_metadataLoadTaskLock)
+            {
+                if (_metadataLoadTask == null)
                 {
-                    _metadataLoader.LoaderHasBeenRun = true;
-                    Task.Run(async () =>
+                    _metadataLoadTask = Task.Run(async () =>
                     {
                         var result = await _metadataLoader.GetResult();
 
@@ -52,8 +64,23 @@ namespace NuGet.PackageManagement.UI
                         DownloadCount = result.DownloadCount;
                         IconUrl = result.IconUrl;
                         Summary = result.Summary;
+
+                        AllVersions = result.Versions;
                     });
                 }
+
+                return _metadataLoadTask;
+            }
+        }
+
+        private string _author;
+
+        public string Author
+        {
+            get
+            {
+                // start the metadata loading in the background.
+                LoadMetadataAsync();
 
                 return _author;
             }
@@ -312,7 +339,70 @@ namespace NuGet.PackageManagement.UI
             }
         }
 
-        public Lazy<Task<IEnumerable<VersionInfo>>> Versions { get; set; }
+        public async Task<Uri> GetIconUrlAsync()
+        {
+            await LoadMetadataAsync();
+            return IconUrl;
+        }
+
+        private bool _includePrerelease;
+
+        public async Task SetIncludePrerelease(bool includePrerelease)
+        {
+            if (_includePrerelease != includePrerelease)
+            {
+                _includePrerelease = includePrerelease;
+                await LoadMetadataAsync();
+                UpdateVersions();               
+            }
+        }
+
+        // All available versions from current source
+        private IEnumerable<VersionInfo> _allVersions;
+
+        public IEnumerable<VersionInfo> AllVersions
+        {
+            get
+            {
+                return _allVersions;
+            }
+            set
+            {
+                if (_allVersions != value)
+                {
+                    _allVersions = value;
+
+                    UpdateVersions();
+                }
+            }
+        }
+
+        private void UpdateVersions()
+        {
+            Versions = AllVersions.Where(v => !v.Version.IsPrerelease || _includePrerelease);
+        }
+
+        // this is the filtered list after _includePrerelease is applied
+        public IEnumerable<VersionInfo> _versions;
+
+        public IEnumerable<VersionInfo> Versions
+        {
+            get
+            {
+                return _versions;
+            }
+            set
+            {
+                _versions = value;
+                OnPropertyChanged(nameof(Versions));
+            }
+        }
+
+        public async Task<IEnumerable<VersionInfo>> GetVersionsAsync()
+        {
+            await LoadMetadataAsync();
+            return Versions;
+        }
 
         protected void OnPropertyChanged(string propertyName)
         {

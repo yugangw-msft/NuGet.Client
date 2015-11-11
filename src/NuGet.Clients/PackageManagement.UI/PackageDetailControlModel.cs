@@ -23,7 +23,7 @@ namespace NuGet.PackageManagement.UI
             Debug.Assert(nugetProjects.Count() == 1);
         }
 
-        public async override Task SetCurrentPackage(
+        public override async Task SetCurrentPackage(
             PackageItemListViewModel searchResultPackage,
             Filter filter)
         {

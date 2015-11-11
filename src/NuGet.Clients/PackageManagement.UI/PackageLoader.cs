@@ -645,7 +645,7 @@ namespace NuGet.PackageManagement.UI
                 cancellationToken.ThrowIfCancellationRequested();
                 resultCount++;
 
-                var searchResultPackage = new PackageItemListViewModel();
+                var searchResultPackage = new PackageItemListViewModel(_option.IncludePrerelease);
                 searchResultPackage.Id = package.Identity.Id;
                 searchResultPackage.Version = package.Identity.Version;
                 searchResultPackage.IconUrl = package.IconUrl;
@@ -681,7 +681,7 @@ namespace NuGet.PackageManagement.UI
                     return filteredVersions;
                 });
 
-                searchResultPackage.Versions = versionList;
+                searchResultPackage.Versions = await versionList.Value;
 
                 searchResultPackage.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(
                     new Lazy<Task<BackgroundLoaderResult>>(

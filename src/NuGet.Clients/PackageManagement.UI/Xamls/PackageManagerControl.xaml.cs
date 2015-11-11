@@ -732,11 +732,12 @@ namespace NuGet.PackageManagement.UI
                         continue;
                     }
 
+                    /* !!!
                     package.BackgroundLoader = new BackgroundLoader<BackgroundLoaderResult>(                        
                         new Lazy<Task<BackgroundLoaderResult>>(() => GetPackageInfo(
                             package.Id,
                             installedPackages,
-                            package.Versions)));
+                            package.Versions))); */
                 }
             }
 
@@ -770,12 +771,12 @@ namespace NuGet.PackageManagement.UI
         /// <param name="installedPackages">All installed pacakges.</param>
         /// <param name="allVersions">List of all versions of the package.</param>
         /// <returns>The background result of the package in the installation target.</returns>
-        private static async Task<BackgroundLoaderResult> GetPackageInfo(
+        private static BackgroundLoaderResult GetPackageInfo(
             string packageId,
             IReadOnlyList<Packaging.PackageReference> installedPackages,
-            Lazy<Task<IEnumerable<VersionInfo>>> allVersions)
+            IEnumerable<VersionInfo> allVersions)
         {
-            var versions = await allVersions.Value;
+            var versions = allVersions;
 
             var latestAvailableVersion = versions.Max(p => p.Version);
 

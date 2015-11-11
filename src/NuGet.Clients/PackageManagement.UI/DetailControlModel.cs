@@ -62,18 +62,18 @@ namespace NuGet.PackageManagement.UI
         /// </summary>
         /// <param name="searchResultPackage">The package to be displayed.</param>
         /// <param name="filter">The current filter. This will used to select the default action.</param>
-        public async virtual Task SetCurrentPackage(
+        public virtual async Task SetCurrentPackage(
             PackageItemListViewModel searchResultPackage,
             Filter filter)
         {
             _searchResultPackage = searchResultPackage;
             _filter = filter;
             OnPropertyChanged("Id");
-            OnPropertyChanged("IconUrl");
-
-            var versions = await searchResultPackage.Versions.Value;
-
+            
+            var versions = await searchResultPackage.GetVersionsAsync();
             _allPackageVersions = versions.Select(v => v.Version).ToList();
+
+            IconUrl = await searchResultPackage.GetIconUrlAsync();
 
             CreateVersions();
             OnCurrentPackageChanged();
@@ -176,9 +176,21 @@ namespace NuGet.PackageManagement.UI
             get { return _searchResultPackage?.Id; }
         }
 
+        private Uri _iconUrl;
         public Uri IconUrl
         {
-            get { return _searchResultPackage?.IconUrl; }
+            get
+            {
+                return _iconUrl;
+            }
+            set
+            {
+                if (_iconUrl != value)
+                {
+                    _iconUrl = value;
+                    OnPropertyChanged("IconUrl");
+                }
+            }
         }
 
         private DetailedPackageMetadata _packageMetadata;
@@ -260,7 +272,7 @@ namespace NuGet.PackageManagement.UI
 
         public async Task LoadPackageMetadaAsync(UIMetadataResource metadataResource, CancellationToken token)
         {
-            var versions = await _searchResultPackage.Versions.Value;
+            var versions = await _searchResultPackage.GetVersionsAsync();
 
             var downloadCountDict = versions.ToDictionary(
                 v => v.Version,
