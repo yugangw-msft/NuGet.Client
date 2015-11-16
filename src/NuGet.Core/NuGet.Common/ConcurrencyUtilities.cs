@@ -213,9 +213,10 @@ namespace NuGet.Common
 
                 try
                 {
-                    using (var mutex = new Mutex(true, Guid.NewGuid().ToString())) ;
+                    using (var mutex = new Mutex(true, Guid.NewGuid().ToString()))
                     {
                     }
+
                     _hasMutex = true;
                 }
                 catch (PlatformNotSupportedException)
