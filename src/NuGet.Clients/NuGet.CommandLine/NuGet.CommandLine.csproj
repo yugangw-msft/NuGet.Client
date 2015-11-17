@@ -75,6 +75,7 @@
     <Compile Include="Common\CommandLineException.cs" />
     <Compile Include="Common\CommandLineRepositoryFactory.cs" />
     <Compile Include="Common\CommandLineUtility.cs" />
+    <Compile Include="Common\ComStreamWrapper.cs" />
     <Compile Include="Common\Console.cs" />
     <Compile Include="Common\ConsoleCredentialProvider.cs" />
     <Compile Include="Common\ConsoleProjectContext.cs" />
@@ -86,12 +87,14 @@
     <Compile Include="Common\MSBuildUser.cs" />
     <Compile Include="Common\PackageExtractor.cs" />
     <Compile Include="Common\PackageSourceProviderExtensions.cs" />
+    <Compile Include="Common\PdbReader.cs" />
     <Compile Include="Common\ProjectHelper.cs" />
     <Compile Include="Common\ProjectInSolution.cs" />
     <Compile Include="Common\ReadOnlyPackageRepository.cs" />
     <Compile Include="Common\ResourceHelper.cs" />
     <Compile Include="Common\SelfUpdater.cs" />
     <Compile Include="Common\Solution.cs" />
+    <Compile Include="Common\SymUnmanagedReaderExtensions.cs" />
     <Compile Include="Common\TypeHelper.cs" />
     <Compile Include="Common\Verbosity.cs" />
     <Compile Include="ConsoleExtensions.cs" />

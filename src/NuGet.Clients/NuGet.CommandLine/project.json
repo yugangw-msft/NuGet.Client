@@ -1,7 +1,9 @@
 ﻿{
   "dependencies": {
-    "NuGet.ProjectManagement": "3.4.0-*",
-    "NuGet.PackageManagement": "3.4.0-*"
+    "Microsoft.DiaSymReader": "1.0.6",
+    "Microsoft.DiaSymReader.Native": "1.3.3",
+    "NuGet.PackageManagement": "3.4.0-*",
+    "NuGet.ProjectManagement": "3.4.0-*"
   },
   "frameworks": {
     "net45": {}
