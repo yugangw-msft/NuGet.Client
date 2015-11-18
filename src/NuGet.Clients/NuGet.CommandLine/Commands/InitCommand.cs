@@ -15,6 +15,9 @@ namespace NuGet.CommandLine
         [Option(typeof(NuGetCommand), "ExpandDescription")]
         public bool Expand { get; set; }
 
+        [Option(typeof(NuGetCommand), "OverwriteIfInvalidDescription")]
+        public bool OverwriteIfInvalid { get; set; }
+
         public override async Task ExecuteCommandAsync()
         {
             // Arguments[0] or Arguments[1] will not be null at this point.
@@ -43,7 +46,8 @@ namespace NuGet.CommandLine
                         throwIfSourcePackageIsInvalid: false,
                         throwIfPackageExistsAndInvalid: false,
                         throwIfPackageExists: false,
-                        expand: Expand);
+                        expand: Expand,
+                        overwriteIfInvalid: OverwriteIfInvalid);
 
                     await OfflineFeedUtility.AddPackageToSource(offlineFeedAddContext, CancellationToken.None);
                 }

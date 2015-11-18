@@ -6338,6 +6338,15 @@ namespace NuGet.CommandLine {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to If provided, a package is overwritten at the destination if it is invalid..
+        /// </summary>
+        internal static string OverwriteIfInvalidDescription {
+            get {
+                return ResourceManager.GetString("OverwriteIfInvalidDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The base path of the files defined in the nuspec file..
         /// </summary>
         internal static string PackageCommandBasePathDescription {

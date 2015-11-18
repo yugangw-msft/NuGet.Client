@@ -13,6 +13,13 @@ namespace NuGet.CommandLine
         public bool ThrowIfPackageExists { get; }
         public bool Expand { get; }
 
+        /// <summary>
+        /// If provided, a package is overwritten at the destination if it is invalid.
+        /// OverwriteIfInvalid has precedence over ThrowIfPackageExistsAndInvalid, in that,
+        /// if OverwriteIfInvalid is true, value of ThrowIfPackageExistsAndInvalid is ignored.
+        /// </summary>
+        public bool OverwriteIfInvalid { get; }
+
         public OfflineFeedAddContext(
             string packagePath,
             string source,
@@ -20,7 +27,8 @@ namespace NuGet.CommandLine
             bool throwIfSourcePackageIsInvalid,
             bool throwIfPackageExistsAndInvalid,
             bool throwIfPackageExists,
-            bool expand)
+            bool expand,
+            bool overwriteIfInvalid)
         {
             if (string.IsNullOrEmpty(packagePath))
             {
@@ -44,6 +52,7 @@ namespace NuGet.CommandLine
             ThrowIfPackageExists = throwIfPackageExists;
             ThrowIfPackageExistsAndInvalid = throwIfPackageExistsAndInvalid;
             Expand = expand;
+            OverwriteIfInvalid = overwriteIfInvalid;
         }
     }
 }

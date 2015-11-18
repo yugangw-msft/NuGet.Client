@@ -137,7 +137,43 @@ namespace NuGet.CommandLine
                     var packageIdentity = packageReader.GetIdentity();
 
                     bool isValidPackage;
-                    if (PackageExists(packageIdentity, source, out isValidPackage))
+                    var packageExists = PackageExists(packageIdentity, source, out isValidPackage);
+
+                    // Package should be added to destination, when the package does not exist
+                    // or if the package exists and is invalid and we need to OverwriteIfInvalid
+                    bool shouldAddPackage
+                        = !packageExists || (!isValidPackage && offlineFeedAddContext.OverwriteIfInvalid);
+
+                    if (shouldAddPackage)
+                    {
+                        if (offlineFeedAddContext.OverwriteIfInvalid)
+                        {
+
+                        }
+
+                        packageStream.Seek(0, SeekOrigin.Begin);
+                        var versionFolderPathContext = new VersionFolderPathContext(
+                            packageIdentity,
+                            source,
+                            logger,
+                            fixNuspecIdCasing: false,
+                            extractNuspecOnly: !offlineFeedAddContext.Expand,
+                            normalizeFileNames: true);
+
+                        await NuGetPackageUtils.InstallFromSourceAsync(
+                            stream => packageStream.CopyToAsync(stream),
+                            versionFolderPathContext,
+                            token);
+
+                        var message = string.Format(
+                            CultureInfo.CurrentCulture,
+                            LocalizedResourceManager.GetString(nameof(NuGetResources.AddCommand_SuccessfullyAdded)),
+                            packagePath,
+                            source);
+
+                        logger.LogInformation(message);
+                    }
+                    else
                     {
                         // Package already exists. Verify if it is valid
                         if (isValidPackage)
@@ -172,30 +208,6 @@ namespace NuGet.CommandLine
                                 logger.LogWarning(message);
                             }
                         }
-                    }
-                    else
-                    {
-                        packageStream.Seek(0, SeekOrigin.Begin);
-                        var versionFolderPathContext = new VersionFolderPathContext(
-                            packageIdentity,
-                            source,
-                            logger,
-                            fixNuspecIdCasing: false,
-                            extractNuspecOnly: !offlineFeedAddContext.Expand,
-                            normalizeFileNames: true);
-
-                        await NuGetPackageUtils.InstallFromSourceAsync(
-                            stream => packageStream.CopyToAsync(stream),
-                            versionFolderPathContext,
-                            token);
-
-                        var message = string.Format(
-                            CultureInfo.CurrentCulture,
-                            LocalizedResourceManager.GetString(nameof(NuGetResources.AddCommand_SuccessfullyAdded)),
-                            packagePath,
-                            source);
-
-                        logger.LogInformation(message);
                     }
                 }
                 catch (InvalidDataException)

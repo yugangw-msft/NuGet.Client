@@ -273,6 +273,54 @@ namespace NuGet.CommandLine.Test
         }
 
         [Fact]
+        public void AddCommand_Success_PackageAlreadyExistsAndInvalidAndOverwriteIfInvalid()
+        {
+            // Arrange
+            using (var testInfo = new TestInfo())
+            {
+                testInfo.Init();
+
+                var args = new string[]
+                {
+                    "add",
+                    testInfo.RandomNupkgFilePath,
+                    "-Source",
+                    testInfo.SourceParamFolder,
+                    "-OverwriteIfInvalid"
+                };
+
+                // Act
+                var result = CommandRunner.Run(
+                    testInfo.NuGetExePath,
+                    testInfo.WorkingPath,
+                    string.Join(" ", args),
+                    waitForExit: true);
+
+                // Assert
+                Util.VerifyResultSuccess(result);
+                Util.VerifyPackageExists(testInfo.Package, testInfo.SourceParamFolder);
+
+                var versionFolderPathResolver = new VersionFolderPathResolver(
+                    testInfo.SourceParamFolder,
+                    normalizePackageId: true);
+
+                File.Delete(
+                    versionFolderPathResolver.GetManifestFilePath(testInfo.Package.Id, testInfo.Package.Version));
+
+                // Main Act
+                result = CommandRunner.Run(
+                    testInfo.NuGetExePath,
+                    testInfo.WorkingPath,
+                    string.Join(" ", args),
+                    waitForExit: true);
+
+                // Assert
+                Util.VerifyResultSuccess(result);
+                Util.VerifyPackageExists(testInfo.Package, testInfo.SourceParamFolder);
+            }
+        }
+
+        [Fact]
         public void AddCommand_Fail_HttpSource()
         {
             // Arrange

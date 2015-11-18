@@ -633,21 +633,22 @@ EndProject";
             string normalizedVersion = packageIdentity.Version.ToNormalizedString();
 
             var packageIdDirectory = Path.Combine(packagesDirectory, normalizedId);
-            Assert.True(Directory.Exists(packageIdDirectory));
+            Assert.True(Directory.Exists(packageIdDirectory), packageIdDirectory + " does not exist, but should.");
 
             var packageVersionDirectory = Path.Combine(packageIdDirectory, normalizedVersion);
-            Assert.True(Directory.Exists(packageVersionDirectory));
+            Assert.True(Directory.Exists(packageVersionDirectory),
+                packageVersionDirectory + " does not exist, but should.");
 
             var nupkgFileName = GetNupkgFileName(normalizedId, normalizedVersion);
 
             var nupkgFilePath = Path.Combine(packageVersionDirectory, nupkgFileName);
-            Assert.True(File.Exists(nupkgFilePath));
+            Assert.True(File.Exists(nupkgFilePath), nupkgFilePath + " does not exist, but should.");
 
             var nupkgSHAFilePath = Path.Combine(packageVersionDirectory, nupkgFileName + ".sha512");
-            Assert.True(File.Exists(nupkgSHAFilePath));
+            Assert.True(File.Exists(nupkgSHAFilePath), nupkgSHAFilePath + " does not exist, but should.");
 
             var nuspecFilePath = Path.Combine(packageVersionDirectory, normalizedId + ".nuspec");
-            Assert.True(File.Exists(nuspecFilePath));
+            Assert.True(File.Exists(nuspecFilePath), nuspecFilePath + " does not exist, but should.");
         }
 
         public static void VerifyPackageDoesNotExist(

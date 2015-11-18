@@ -5302,4 +5302,7 @@ nuget locals global-packages -list</value>
   <data name="LocalsCommandListDescription" xml:space="preserve">
     <value>List the selected local resources or cache location(s).</value>
   </data>
+  <data name="OverwriteIfInvalidDescription" xml:space="preserve">
+    <value>If provided, a package is overwritten at the destination if it is invalid.</value>
+  </data>
 </root>
