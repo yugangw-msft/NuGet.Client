@@ -207,7 +207,11 @@ namespace NuGet.CommandLine
             // Add sources if this is a symbol package
             if (IncludeSymbols)
             {
+                // Adding source from the project sources folder
                 ApplyAction(p => p.AddFiles(builder, SourcesItemType, SourcesFolder));
+
+                // Adding missing sources file that are being ref by the symbols files
+                AddMissingSourceFilesReferencedByPdb(builder);
             }
 
             ProcessDependencies(builder);
@@ -1169,6 +1173,66 @@ namespace NuGet.CommandLine
 
             // Otherwise the file is probably a shortcut so just take the file name
             return Path.GetFileName(fullPath);
+        }
+
+        private void AddMissingSourceFilesReferencedByPdb(PackageBuilder builder)
+        {
+            // We build a new symbol package from physical files, so it's safe to cast here (we need the SourcePath property).
+            var packageFiles = builder.Files.OfType<PhysicalPackageFile>().ToArray();
+
+            var pdbFiles = packageFiles.Where(file => file.Path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
+            var missingFiles = pdbFiles.SelectMany(pdbFile => GetMissingSourceFilesReferencedByPdb(pdbFile, packageFiles));
+
+            foreach (var file in missingFiles)
+            {
+                AddFileToBuilder(builder, file);
+            }
+        }
+
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "We want to continue regardless of any invalid PDBs files.")]
+        private IEnumerable<PhysicalPackageFile> GetMissingSourceFilesReferencedByPdb(IPackageFile pdbFile, IEnumerable<PhysicalPackageFile> packageFiles)
+        {
+            try
+            {
+                var sourceFiles = PdbReader.GetSourceFileNames(pdbFile);
+                var missingFiles = sourceFiles.Except(packageFiles.Select(file => file.SourcePath), StringComparer.OrdinalIgnoreCase);
+
+                return missingFiles.Select(CreatePackageFileFromSourceFile).Where(file => file != null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    string.Format(
+                        LocalizedResourceManager.GetString("InvalidPDBFile"),
+                        pdbFile.Path, 
+                        ex.Message));
+            }
+
+            return Enumerable.Empty<PhysicalPackageFile>();
+        }
+
+        private PhysicalPackageFile CreatePackageFileFromSourceFile(string file)
+        {
+            var targetFilePath = Normalize(file);
+
+            if (!File.Exists(file))
+            {
+                Logger.LogWarning(
+                    string.Format(LocalizedResourceManager.GetString("Warning_FileDoesNotExist"),
+                    targetFilePath));
+
+                return null;
+            }
+
+            var projectName = Path.GetFileNameWithoutExtension(_project.FullPath);
+
+            // if IncludeReferencedProjects is true and we are adding source files,
+            // add projectName as part of the target to avoid file conflicts.
+            var targetPath = IncludeReferencedProjects
+                ? Path.Combine(SourcesFolder, projectName, targetFilePath)
+                : Path.Combine(SourcesFolder, targetFilePath);
+
+            return new PhysicalPackageFile { SourcePath = file, TargetPath = targetPath };
         }
 
         private class Walker : PackageWalker

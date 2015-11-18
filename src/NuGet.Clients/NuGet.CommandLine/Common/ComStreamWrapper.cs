@@ -9,7 +9,8 @@ using STATSTG = System.Runtime.InteropServices.ComTypes.STATSTG;
 namespace NuGet.Common
 {
     /// <summary>
-    /// Wrap a Stream so it's usable where we need an IStream
+    /// Com Stream wrapper should use only
+    /// we need to pass a stream to unmanaged call need IStream
     /// </summary>
     internal sealed class ComStreamWrapper : IStream, IDisposable
     {
