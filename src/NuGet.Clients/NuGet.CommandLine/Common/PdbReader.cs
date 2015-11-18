@@ -57,7 +57,7 @@ namespace NuGet.Common
             //the source file name will be similar to 17d14f5c-a337-4978-8281-53493378c1071.vb.
             return sourceFileName.EndsWith("17d14f5c-a337-4978-8281-53493378c1071.vb", StringComparison.OrdinalIgnoreCase);
         }
-        
+
         private class DummyMetadataImport : IMetadataImport { }
 
         [SuppressUnmanagedCodeSecurity]
@@ -75,5 +75,5 @@ namespace NuGet.Common
 
     [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces", Justification = "need to validate that's ok to suppress.")]
     [ComImport, Guid("7DAC8207-D3AE-4c75-9B67-92801A497D44"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown), TypeIdentifier]
-    internal interface IMetadataImport { }
+    public interface IMetadataImport { }
 }
