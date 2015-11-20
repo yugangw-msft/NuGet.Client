@@ -130,74 +130,110 @@ namespace NuGet.Protocol.Core.v3.RemoteRepositories
             return result;
         }
 
-        private static Task CreateCacheFile(
+        private Task CreateCacheFile(
             HttpSourceResult result,
             HttpResponseMessage response,
             TimeSpan cacheAgeLimit,
             CancellationToken cancellationToken)
         {
+            string tempCacheFile = null;
+
             var newFile = result.CacheFileName + "-new";
 
-            // Zero value of TTL means we always download the latest package
-            // So we write to a temp file instead of cache
-            if (cacheAgeLimit.Equals(TimeSpan.Zero))
+            try
             {
-                result.CacheFileName = Path.GetTempFileName();
-                newFile = Path.GetTempFileName();
-            }
-
-            // The update of a cached file is divided into two steps:
-            // 1) Delete the old file. 2) Create a new file with the same name.
-            // To prevent race condition among multiple processes, here we use a lock to make the update atomic.
-            return ConcurrencyUtilities.ExecuteWithFileLocked(result.CacheFileName,
-                action: async token =>
+                // Zero value of TTL means we always download the latest package
+                // So we write to a temp file instead of cache
+                if (cacheAgeLimit.Equals(TimeSpan.Zero))
                 {
-                    using (var stream = new FileStream(
-                        newFile,
-                        FileMode.Create,
-                        FileAccess.ReadWrite,
-                        FileShare.ReadWrite | FileShare.Delete,
-                        BufferSize,
-                        useAsync: true))
-                    {
-                        await response.Content.CopyToAsync(stream);
-                        await stream.FlushAsync(cancellationToken);
-                    }
+                    tempCacheFile = GetNewTempFile();
+                    result.CacheFileName = tempCacheFile;
 
-                    if (File.Exists(result.CacheFileName))
-                    {
-                        // Process B can perform deletion on an opened file if the file is opened by process A
-                        // with FileShare.Delete flag. However, the file won't be actually deleted until A close it.
-                        // This special feature can cause race condition, so we never delete an opened file.
-                        if (!IsFileAlreadyOpen(result.CacheFileName))
-                        {
-                            File.Delete(result.CacheFileName);
-                        }
-                    }
+                    newFile = GetNewTempFile();
+                }
 
-                    // If the destination file doesn't exist, we can safely perform moving operation.
-                    // Otherwise, moving operation will fail.
-                    if (!File.Exists(result.CacheFileName))
+                // The update of a cached file is divided into two steps:
+                // 1) Delete the old file. 2) Create a new file with the same name.
+                // To prevent race condition among multiple processes, here we use a lock to make the update atomic.
+                return ConcurrencyUtilities.ExecuteWithFileLocked(result.CacheFileName,
+                    action: async token =>
                     {
-                        File.Move(
-                                newFile,
-                                result.CacheFileName);
-                    }
-
-                    // Even the file deletion operation above succeeds but the file is not actually deleted,
-                    // we can still safely read it because it means that some other process just updated it
-                    // and we don't need to update it with the same content again.
-                    result.Stream = new FileStream(
-                            result.CacheFileName,
-                            FileMode.Open,
-                            FileAccess.Read,
-                            FileShare.Read | FileShare.Delete,
+                        using (var stream = new FileStream(
+                            newFile,
+                            FileMode.Create,
+                            FileAccess.ReadWrite,
+                            FileShare.ReadWrite | FileShare.Delete,
                             BufferSize,
-                            useAsync: true);
+                            useAsync: true))
+                        {
+                            await response.Content.CopyToAsync(stream);
+                            await stream.FlushAsync(cancellationToken);
+                        }
 
-                    return 0;
-                },
-                token: cancellationToken);
+                        // We cleanup the temp cache file later reliably, this is just to replace the old cache entry
+                        if (File.Exists(result.CacheFileName))
+                        {
+                            // Process B can perform deletion on an opened file if the file is opened by process A
+                            // with FileShare.Delete flag. However, the file won't be actually deleted until A close it.
+                            // This special feature can cause race condition, so we never delete an opened file.
+                            // Note that there is a still race condition here where the file might open or close just between
+                            // the two calls, but the downside is just the file will get closed later.
+                            if (!IsFileAlreadyOpen(result.CacheFileName))
+                            {
+                                try
+                                {
+                                    File.Delete(result.CacheFileName);
+                                }
+                                catch (Exception)
+                                {
+                                    //Logger.LogWarning(
+                                    //    $"Failed to cleanup the old cache file '{result.CacheFileName}' due to {ex.Message}");
+                                }
+                            }
+                        }
+
+                        // If the destination file doesn't exist, we can safely perform moving operation.
+                        // Otherwise, moving operation will fail.
+                        if (!File.Exists(result.CacheFileName))
+                        {
+                            try
+                            {
+                                File.Move(newFile, result.CacheFileName);
+                            }
+                            catch (Exception)
+                            {
+                                //Logger.LogWarning($"Failed to create the cache file '{result.CacheFileName}' due to {ex.Message}");
+                            }
+                        }
+
+                        // Even the file deletion operation above succeeds but the file is not actually deleted,
+                        // we can still safely read it because it means that some other process just updated it
+                        // and we don't need to update it with the same content again.
+                        result.Stream = new FileStream(
+                                    result.CacheFileName,
+                                    FileMode.Open,
+                                    FileAccess.Read,
+                                    FileShare.Read | FileShare.Delete,
+                                    BufferSize,
+                                    useAsync: true);
+
+                        return 0;
+                    },
+                    token: cancellationToken);
+            }
+            finally
+            {
+                if (File.Exists(newFile))
+                {
+                    try
+                    {
+                        File.Delete(newFile);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
         }
 
         private async Task<HttpSourceResult> TryCache(string uri,
@@ -301,6 +337,28 @@ namespace NuGet.Protocol.Core.v3.RemoteRepositories
             }
 
             return false;
+        }
+
+        private static string GetNewTempFile()
+        {
+            string temp = Path.GetTempPath();
+            string filePath = null;
+
+            int count = 0;
+
+            do
+            {
+                filePath = Path.Combine(temp, Path.GetRandomFileName());
+                count++;
+            }
+            while (File.Exists(filePath) && count < 3);
+
+            if (count == 3)
+            {
+                throw new InvalidOperationException("Failed to create a temp file.");
+            }
+
+            return filePath;
         }
     }
 }
