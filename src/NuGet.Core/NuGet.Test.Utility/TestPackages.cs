@@ -35,14 +35,6 @@ namespace NuGet.Test.Utility
         </dependencies>";
 
 
-
-        public class TestPackageInfo
-        {
-            public string Id { get; set; }
-            public string Version { get; set; }
-            public FileInfo File { get; set; }
-        }
-
         public static ZipArchive GetZip(FileInfo file)
         {
             return new ZipArchive(file.OpenRead());
@@ -50,7 +42,7 @@ namespace NuGet.Test.Utility
 
         public static TestPackageInfo GetNearestReferenceFilteringPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new TestPackageInfo()
             {
                 Id = "RefPackage",
@@ -100,7 +92,7 @@ namespace NuGet.Test.Utility
 
         public static TestPackageInfo GetPackageWithNupkgCopy()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new TestPackageInfo()
             {
                 Id = "RefPackage",
@@ -150,7 +142,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyFolderPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -180,10 +172,9 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyTestPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
-            var result = new FileInfo(file);
+            var file = new TempFile();
 
-            using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
+            using (var zip = new ZipArchive(File.Create(file), ZipArchiveMode.Create))
             {
                 zip.AddEntry("lib/test.dll", new byte[] { 0 });
                 zip.AddEntry("lib/net40/test40.dll", new byte[] { 0 });
@@ -215,12 +206,14 @@ namespace NuGet.Test.Utility
                             </package>", Encoding.UTF8);
             }
 
+            var result = new FileInfo(file);
+
             return result;
         }
 
         public static FileInfo GetLegacyTestPackageMinClient(string minClientVersion)
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -265,7 +258,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLibSubFolderPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -303,7 +296,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLibEmptyFolderPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -344,7 +337,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyTestPackageWithReferenceGroups()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -396,7 +389,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyTestPackageWithPre25References()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -445,7 +438,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyContentPackage()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -473,7 +466,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyContentPackageWithFrameworks()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -501,7 +494,7 @@ namespace NuGet.Test.Utility
 
         public static FileInfo GetLegacyContentPackageMixed()
         {
-            var file = Path.GetTempFileName() + ".nupkg";
+            var file = new TempFile();
             var result = new FileInfo(file);
 
             using (var zip = new ZipArchive(File.Create(result.FullName), ZipArchiveMode.Create))
@@ -657,6 +650,36 @@ namespace NuGet.Test.Utility
                 string.Format(DependenciesStringFormat, "Owin", "1.0") : string.Empty;
             return string.Format(NuspecStringFormat, packageId, packageVersion,
                 string.Join(Environment.NewLine, frameworkAssemblyReferences, dependenciesString));
+        }
+
+        private class TempFile
+        {
+            private readonly string _filePath;
+
+            public TempFile()
+            {
+                string packagesFolder = Path.Combine(TestFileSystemUtility.NuGetTestFolder, "NuGetTestPackages");
+
+                Directory.CreateDirectory(packagesFolder);
+
+                int count = 0;
+                do
+                {
+                    _filePath = Path.Combine(packagesFolder, Path.GetRandomFileName() + ".nupkg");
+                    count++;
+                }
+                while (File.Exists(_filePath) && count < 3);
+
+                if (count == 3)
+                {
+                    throw new InvalidOperationException("Failed to create a random file.");
+                }
+            }
+
+            public static implicit operator string (TempFile f)
+            {
+                return f._filePath;
+            }
         }
     }
 }
