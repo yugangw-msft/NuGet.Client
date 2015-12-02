@@ -513,8 +513,8 @@ namespace Proj2
                 var r = CommandRunner.Run(
                     nugetexe,
                     proj2Directory,
-                    "pack proj2.csproj -build -IncludeReferencedProjects -symbols",
-                    waitForExit: true);
+                    "--debug pack proj2.csproj -build -IncludeReferencedProjects -symbols",
+                    waitForExit: true, timeOutInMilliseconds: 1000000000);
                 Assert.Equal(0, r.Item1);
 
                 // Assert
