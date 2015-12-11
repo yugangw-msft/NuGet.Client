@@ -142,8 +142,6 @@ function BuildXproj()
 
     if ($LASTEXITCODE -ne 0)
     {
-        throw "Build failed $ProjectName"
-    }
 
     if ($RunTests)
     {
