@@ -104,8 +104,7 @@ Function Restore-XProjFast {
 }
 
 ## Building XProj projects
-function BuildXproj()
-{
+Function BuildXproj() {
     ## Setting the DNX build version
     if($ReleaseLabel -ne "Release")
     {
@@ -142,6 +141,8 @@ function BuildXproj()
 
     if ($LASTEXITCODE -ne 0)
     {
+        throw "Build failed $ProjectName"
+    }
 
     if ($RunTests)
     {
