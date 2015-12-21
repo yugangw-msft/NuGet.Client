@@ -1,10 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-#if !DNXCORE50
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using NuGet.Configuration.Proxy;
 
 namespace NuGet.Configuration
 {
@@ -19,7 +19,7 @@ namespace NuGet.Configuration
         /// </summary>
         private static readonly IWebProxy _originalSystemProxy = WebRequest.GetSystemWebProxy();
 
-        private readonly ConcurrentDictionary<Uri, WebProxy> _cache = new ConcurrentDictionary<Uri, WebProxy>();
+        private readonly ConcurrentDictionary<Uri, IWebProxy> _cache = new ConcurrentDictionary<Uri, IWebProxy>();
 
 #if BOOTSTRAPPER
     // Temporarily commenting these out until we can figure out a nicer way of doing this in the bootstrapper.
@@ -57,11 +57,12 @@ namespace NuGet.Configuration
             if (configuredProxy != null)
             {
                 // If a proxy was cached, it means the stored credentials are incorrect. Use the cached one in this case.
-                WebProxy actualProxy;
+                IWebProxy actualProxy;
                 if (_cache.TryGetValue(configuredProxy.Address, out actualProxy))
                 {
                     return actualProxy;
                 }
+
                 return configuredProxy;
             }
 #endif
@@ -72,7 +73,7 @@ namespace NuGet.Configuration
 
             var systemProxy = GetSystemProxy(uri);
 
-            WebProxy effectiveProxy;
+            IWebProxy effectiveProxy;
             // See if we have a proxy instance cached for this proxy address
             if (_cache.TryGetValue(systemProxy.Address, out effectiveProxy))
             {
@@ -83,14 +84,14 @@ namespace NuGet.Configuration
         }
 
 #if !BOOTSTRAPPER
-        public WebProxy GetUserConfiguredProxy()
+        public IWebProxy GetUserConfiguredProxy()
         {
             // Try reading from the settings. The values are stored as 3 config values http_proxy, http_proxy_user, http_proxy_password
             var host = _settings.GetValue(SettingsUtility.ConfigSection, ConfigurationContants.HostKey);
             if (!String.IsNullOrEmpty(host))
             {
                 // The host is the minimal value we need to assume a user configured proxy.
-                var webProxy = new WebProxy(host);
+                var webProxy = new NuGetWebProxy(host);
                 var userName = _settings.GetValue(SettingsUtility.ConfigSection, ConfigurationContants.UserKey);
                 var password = SettingsUtility.GetDecryptedValue(_settings, SettingsUtility.ConfigSection, ConfigurationContants.PasswordKey);
 
@@ -108,7 +109,7 @@ namespace NuGet.Configuration
             if (!String.IsNullOrEmpty(host)
                 && Uri.TryCreate(host, UriKind.Absolute, out uri))
             {
-                var webProxy = new WebProxy(uri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.SafeUnescaped));
+                var webProxy = new NuGetWebProxy(uri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.SafeUnescaped));
                 if (!String.IsNullOrEmpty(uri.UserInfo))
                 {
                     var credentials = uri.UserInfo.Split(':');
@@ -132,12 +133,12 @@ namespace NuGet.Configuration
             }
         }
 
-        private static WebProxy GetSystemProxy(Uri uri)
+        private static IWebProxy GetSystemProxy(Uri uri)
         {
             // WebRequest.DefaultWebProxy seems to be more capable in terms of getting the default
             // proxy settings instead of the WebRequest.GetSystemProxy()
             var proxyUri = _originalSystemProxy.GetProxy(uri);
-            return new WebProxy(proxyUri);
+            return new NuGetWebProxy(proxyUri);
         }
 
         /// <summary>
@@ -171,7 +172,8 @@ namespace NuGet.Configuration
                     {
                         return false;
                     }
-                    proxy = new WebProxy(proxyAddress);
+
+                    proxy = new NuGetWebProxy(proxyAddress);
                 }
             }
 
@@ -179,5 +181,3 @@ namespace NuGet.Configuration
         }
     }
 }
-
-#endif
