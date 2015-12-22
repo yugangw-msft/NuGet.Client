@@ -77,11 +77,11 @@ namespace NuGet.Test
                     }
 
                     // Link projects
-                    var reference0 = CreateReference(buildIntegratedProjects[0], buildIntegratedProjects[1]);
-                    var reference1 = CreateReference(buildIntegratedProjects[1], buildIntegratedProjects[2]);
-                    var reference2 = CreateReference(buildIntegratedProjects[2], buildIntegratedProjects[3]);
-                    var reference3 = CreateReference(buildIntegratedProjects[3]);
-                    var normalReference = CreateReference("myproj");
+                    var reference0 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[0], buildIntegratedProjects[1]);
+                    var reference1 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[1], buildIntegratedProjects[2]);
+                    var reference2 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[2], buildIntegratedProjects[3]);
+                    var reference3 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[3]);
+                    var normalReference = new TestBuildIntegratedProjectReference("myproj");
 
                     buildIntegratedProjects[0].ProjectReferences.Add(reference0);
                     buildIntegratedProjects[0].ProjectReferences.Add(reference1);
@@ -141,7 +141,7 @@ namespace NuGet.Test
         }
 
         // Verify that parent projects are restored when a child project is updated
-        [Fact(Skip="Renable after p2ps")]
+        [Fact]
         public async Task TestPacManBuildIntegratedInstallPackageTransitive()
         {
             // Arrange
@@ -164,7 +164,7 @@ namespace NuGet.Test
                     var token = CancellationToken.None;
 
                     var testNuGetProjectContext = new TestNuGetProjectContext();
-                    var projectTargetFramework = NuGetFramework.Parse("net45");
+                    var projectTargetFramework = NuGetFramework.Parse("net452");
 
                     var configs = new List<string>();
                     var lockFiles = new List<string>();
@@ -180,7 +180,7 @@ namespace NuGet.Test
 
                         configs.Add(config);
 
-                        CreateConfigJson(config);
+                        CreateConfigJsonNet452(config);
 
                         var msBuildNuGetProjectSystem = new TestMSBuildNuGetProjectSystem(
                             projectTargetFramework,
@@ -198,20 +198,24 @@ namespace NuGet.Test
                     }
 
                     // Link projects
-                    var reference1 = CreateReference(buildIntegratedProjects[1], buildIntegratedProjects[2]);
-                    var reference2 = CreateReference(buildIntegratedProjects[2], buildIntegratedProjects[3]);
-                    var reference3 = CreateReference(buildIntegratedProjects[3]);
-                    var normalReference = CreateReference("myproj");
+                    var reference0 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[0], buildIntegratedProjects[1]);
+                    var reference1 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[1], buildIntegratedProjects[2]);
+                    var reference2 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[2], buildIntegratedProjects[3]);
+                    var reference3 = new TestBuildIntegratedProjectReference(buildIntegratedProjects[3]);
+                    var normalReference = new TestBuildIntegratedProjectReference("myproj");
 
+                    buildIntegratedProjects[0].ProjectReferences.Add(reference0);
                     buildIntegratedProjects[0].ProjectReferences.Add(reference1);
                     buildIntegratedProjects[0].ProjectReferences.Add(reference2);
                     buildIntegratedProjects[0].ProjectReferences.Add(reference3);
                     buildIntegratedProjects[0].ProjectReferences.Add(normalReference);
 
+                    buildIntegratedProjects[1].ProjectReferences.Add(reference1);
                     buildIntegratedProjects[1].ProjectReferences.Add(reference2);
                     buildIntegratedProjects[1].ProjectReferences.Add(reference3);
                     buildIntegratedProjects[1].ProjectReferences.Add(normalReference);
 
+                    buildIntegratedProjects[2].ProjectReferences.Add(reference2);
                     buildIntegratedProjects[2].ProjectReferences.Add(reference3);
                     buildIntegratedProjects[2].ProjectReferences.Add(normalReference);
 
@@ -1404,8 +1408,8 @@ namespace NuGet.Test
         {
             public HashSet<PackageIdentity> ExecuteInitScriptAsyncCalls { get; }
                 = new HashSet<PackageIdentity>(PackageIdentity.Comparer);
-            public List<BuildIntegratedProjectReference> ProjectReferences { get; }
-                = new List<BuildIntegratedProjectReference>();
+            public List<TestBuildIntegratedProjectReference> ProjectReferences { get; }
+                = new List<TestBuildIntegratedProjectReference>();
 
             public TestBuildIntegratedNuGetProject(string jsonConfig, IMSBuildNuGetProjectSystem msbuildProjectSystem)
                 : base(jsonConfig, msbuildProjectSystem)
@@ -1427,24 +1431,61 @@ namespace NuGet.Test
             public override Task<IReadOnlyList<BuildIntegratedProjectReference>> GetProjectReferenceClosureAsync(
                 BuildIntegratedProjectReferenceContext context)
             {
-                return Task.FromResult<IReadOnlyList<BuildIntegratedProjectReference>>(ProjectReferences);
+                return Task.FromResult<IReadOnlyList<BuildIntegratedProjectReference>>(
+                    ProjectReferences.Select(proj => proj.BuildIntegratedProjectReference).ToList());
             }
-        }
-
-        private BuildIntegratedProjectReference CreateReference(BuildIntegratedNuGetProject project, params BuildIntegratedNuGetProject[] children)
-        {
-            var childConfigs = children.Select(child => child.ProjectName).ToList();
-
-            return new BuildIntegratedProjectReference(
-                project.ProjectName, 
-                project.PackageSpec, 
-                project.MSBuildNuGetProjectSystem.ProjectFullPath, 
-                childConfigs);
         }
 
         private BuildIntegratedProjectReference CreateReference(string name)
         {
             return new BuildIntegratedProjectReference(name, null, null, Enumerable.Empty<string>());
+        }
+
+        private class TestBuildIntegratedProjectReference
+        {
+            public BuildIntegratedNuGetProject Project { get; set; }
+
+            public BuildIntegratedNuGetProject[] Children { get; set; }
+
+            public string ProjectName { get; set; }
+
+            public TestBuildIntegratedProjectReference(string name)
+            {
+                ProjectName = name;
+            }
+
+            public TestBuildIntegratedProjectReference(
+                BuildIntegratedNuGetProject project, 
+                params BuildIntegratedNuGetProject[] children)
+            {
+                Project = project;
+                Children = children;
+            }
+
+            public BuildIntegratedProjectReference BuildIntegratedProjectReference
+            {
+                get
+                {
+                    if (ProjectName != null)
+                    {
+                        return new BuildIntegratedProjectReference(
+                            ProjectName, 
+                            null,
+                            null, 
+                            Enumerable.Empty<string>());
+                    }
+                    else
+                    {
+                        var childConfigs = Children.Select(child => child.ProjectName).ToList();
+
+                        return new BuildIntegratedProjectReference(
+                            Project.ProjectName,
+                            Project.PackageSpec,
+                            Project.MSBuildNuGetProjectSystem.ProjectFullPath,
+                            childConfigs);
+                    }
+                }
+            }
         }
     }
 }

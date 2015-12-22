@@ -161,16 +161,39 @@ namespace NuGet.Commands
             var projectResolver = new PackageSpecResolver(_request.Project);
             var nugetRepository = Repository.Factory.GetCoreV3(_request.PackagesDirectory);
 
-            if (!_request.ExternalProjects.Any(proj => 
-                string.Equals(_request.Project.Name, proj.UniqueName, StringComparison.OrdinalIgnoreCase))
-                && _request.ExternalProjects.Any())
+            // External references
+            var updatedExternalProjects = new List<ExternalProjectReference>(_request.ExternalProjects);
+
+            if (_request.ExternalProjects.Any())
             {
-                // Debug.Fail("RestoreRequest.ExternaProjects contains references, but does not contain the top level references. Add the project we are restoring for.");
-                throw new InvalidOperationException($"Missing external reference metadata for {_request.Project.Name}");
+                var rootProject = _request.ExternalProjects.SingleOrDefault(proj =>
+                     string.Equals(_request.Project.Name, proj.UniqueName, StringComparison.OrdinalIgnoreCase));
+
+                if (rootProject != null)
+                {
+                    // Replace the project spec with the passed in package spec,
+                    // for installs which are done in memory first this will be
+                    // different from the one on disk
+                    updatedExternalProjects.RemoveAll(project => 
+                        project.UniqueName.Equals(rootProject.UniqueName, StringComparison.Ordinal));
+
+                    var updatedReference = new ExternalProjectReference(
+                        rootProject.UniqueName, 
+                        _request.Project, 
+                        rootProject.MSBuildProjectPath, 
+                        rootProject.ExternalProjectReferences);
+
+                    updatedExternalProjects.Add(updatedReference);
+                }
+                else
+                {
+                    Debug.Fail("RestoreRequest.ExternaProjects contains references, but does not contain the top level references. Add the project we are restoring for.");
+                    throw new InvalidOperationException($"Missing external reference metadata for {_request.Project.Name}");
+                }
             }
 
             context.ProjectLibraryProviders.Add(
-                    new PackageSpecReferenceDependencyProvider(projectResolver, _request.ExternalProjects));
+                    new PackageSpecReferenceDependencyProvider(projectResolver, updatedExternalProjects));
 
             context.LocalLibraryProviders.Add(
                 new SourceRepositoryDependencyProvider(nugetRepository, _log, _request.CacheContext));
