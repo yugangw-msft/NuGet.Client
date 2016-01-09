@@ -25,21 +25,26 @@ param (
     [int]$PMCLaunchWaitTimeInSecs,
     [Parameter(Mandatory=$true)]
 	[ValidateSet("15.0", "14.0", "12.0", "11.0", "10.0")]
-    [string]$VSVersion)
+    [string]$VSVersion,
+    [switch]$SkipEndToEndZipCopyAndExtraction,
+    [switch]$SkipSetupAndInstall)
 
 . "$PSScriptRoot\Utils.ps1"
 . "$PSScriptRoot\VSUtils.ps1"
 . "$PSScriptRoot\NuGetFunctionalTestUtils.ps1"
 
-$success = IsAdminPrompt
-
-if ($success -eq $false)
+if ($SkipSetupAndInstall -eq $false)
 {
-    $errorMessage = 'ERROR: Please re-run this script as an Administrator! ' +
-    'Actions such as installing VSIX, uninstalling VSIX and updating registry require admin privileges.'
+    $success = IsAdminPrompt
 
-    Write-Error $errorMessage
-    exit 1
+    if ($success -eq $false)
+    {
+        $errorMessage = 'ERROR: Please re-run this script as an Administrator! ' +
+        'Actions such as installing VSIX, uninstalling VSIX and updating registry require admin privileges.'
+
+        Write-Error $errorMessage
+        exit 1
+    }
 }
 
 $NuGetDropPath = Join-Path $CIRoot (Join-Path $Branch (Join-Path $BuildNumber "artifacts"))
@@ -48,39 +53,55 @@ $NuGetTestPath = $RootDir+'\EndToEnd'
 Write-Host 'NuGetDropPath is ' $NuGetDropPath
 Write-Host 'NuGetTestPath is ' $NuGetTestPath
 
-CleanPaths -NuGetTestPath $NuGetTestPath
-
-CleanTempFolder
-
-ExtractEndToEndZip $NuGetDropPath $RootDir
-
-CopyNuGetCITools $NuGetCIToolsFolder $NuGetTestPath
-
-$success = DisableCrashDialog
-if ($success -eq $false)
+if ($SkipEndToEndZipCopyAndExtraction -eq $false)
 {
-    Write-Error 'WARNING: Could not disable crash dialog'
-    exit 1
+    CleanPaths -NuGetTestPath $NuGetTestPath
+    ExtractEndToEndZip $NuGetDropPath $RootDir
+}
+
+KillRunningInstancesOfVS
+
+if ($SkipSetupAndInstall -eq $false)
+{
+    # Already checked if the prompt is an admin prompt
+
+    CopyNuGetCITools $NuGetCIToolsFolder $NuGetTestPath
+
+    $success = DisableCrashDialog
+    if ($success -eq $false)
+    {
+        Write-Error 'WARNING: Could not disable crash dialog'
+        exit 1
+    }
+
+    $success = InstallNuGetVSIX $NuGetDropPath $NuGetTestPath $NuGetVSIXID $VSVersion $VSIXInstallerWaitTimeInSecs
+    if ($success -eq $false)
+    {
+        Write-Error 'WARNING: Could not update NuGet VSIX'
+        exit 1
+    }
 }
 
 Write-Host 'Before starting the functional tests, force delete all the Results.html under the tests folder'
 (Get-ChildItem $NuGetTestPath -Recurse Results.html) | Remove-Item -Force
 
-KillRunningInstancesOfVS
+CleanTempFolder
 
-$success = InstallNuGetVSIX $NuGetDropPath $NuGetTestPath $NuGetVSIXID $VSVersion $VSIXInstallerWaitTimeInSecs
-if ($success -eq $false)
-{
-    Write-Error 'WARNING: Could not update NuGet VSIX'
-    exit 1
-}
 
 $dte2 = LaunchVSandGetDTE $VSVersion $VSLaunchWaitTimeInSecs
 
 Write-Host "Launching the Package Manager Console inside VS and waiting for $PMCLaunchWaitTimeInSecs seconds"
 ExecuteCommand $dte2 "View.PackageManagerConsole" $null "Opening NuGet Package Manager Console" $PMCLaunchWaitTimeInSecs
 
-Write-Host "Launching the Package Manager Console and executing the necessary command: ""$PMCCommand"""
+
+Write-Host "Remove any NuGet.Tests module that may have been loaded already and wait for a second. This operation is very fast"
+ExecuteCommand $dte2 "View.PackageManagerConsole" "Get-Module NuGet.Tests | Remove-Module" "Running command: 'Get-Module NuGet.Tests | Remove-Module' ..." 1
+
+$NuGetTestsModulePath = Join-Path $NuGetTestPath "NuGet.Tests.psm1"
+Write-Host "Import NuGet.Tests module from $NuGetTestPath and wait for a second. This operation is very fast"
+ExecuteCommand $dte2 "View.PackageManagerConsole" "Import-Module $NuGetTestsModulePath" "Running command: 'Import-Module $NuGetTestsModulePath' ..." 1
+
+Write-Host "Executing the provided Package manager console command: ""$PMCCommand"""
 ExecuteCommand $dte2 "View.PackageManagerConsole" $PMCCommand "Running command: $PMCCommand ..."
 
 Write-Host "Starting functional tests with command '$PMCCommand'. Will wait for results for '$ResultsTotalWaitTimeInSecs' seconds."
@@ -90,3 +111,7 @@ if ($success -eq $false)
 {
     exit 1
 }
+
+# TODO: IMPLEMENT BACKUP OF LOGS
+
+Write-Host -ForegroundColor Cyan "THE END!"
