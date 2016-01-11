@@ -90,10 +90,22 @@ function LaunchVSandGetDTE
 
     LaunchVS $VSVersion
 
-    # Wait for $VSLaunchWaitTimeInSecs secs for VS to load before getting the DTE COM object
-    start-sleep $VSLaunchWaitTimeInSecs
+    $dte2 = $null
+    $count = 0
+    while($count -lt 3)
+    {
+        # Wait for $VSLaunchWaitTimeInSecs secs for VS to load before getting the DTE COM object
+        Write-Host "Waiting for $VSLaunchWaitTimeInSecs seconds for DTE to become available"
+        start-sleep $VSLaunchWaitTimeInSecs
 
-    $dte2 = GetDTE2 $VSVersion
+        $dte2 = GetDTE2 $VSVersion
+        if ($dte2)
+        {
+	        break
+        }
+
+        $count++
+    }
 
     return $dte2
 }

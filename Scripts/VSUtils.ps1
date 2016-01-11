@@ -59,8 +59,15 @@ function GetDTE2
         [string]$VSVersion
     )
 
-    $dte2 = [System.Runtime.InteropServices.Marshal]::GetActiveObject("VisualStudio.DTE." + $VSVersion)
-    return $dte2
+    Try
+    {
+        $dte2 = [System.Runtime.InteropServices.Marshal]::GetActiveObject("VisualStudio.DTE." + $VSVersion)
+        return $dte2
+    }
+    Catch
+    {
+        return $null
+    }
 }
 
 function ExecuteCommand
