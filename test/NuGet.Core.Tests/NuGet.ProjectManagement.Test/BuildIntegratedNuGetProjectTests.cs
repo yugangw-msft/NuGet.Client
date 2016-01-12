@@ -384,7 +384,7 @@ namespace ProjectManagement.Test
 
         private static DownloadResourceResult GetDownloadResourceResult(FileInfo fileInfo)
         {
-            return new DownloadResourceResult(fileInfo.OpenRead());
+            return DownloadResourceResult.FromStream(fileInfo.OpenRead());
         }
 
         private static JObject BasicConfig

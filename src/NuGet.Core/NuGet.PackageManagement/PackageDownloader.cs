@@ -150,15 +150,6 @@ namespace NuGet.PackageManagement
                     sourceRepository.PackageSource.Source));
             }
 
-            if (downloadResourceResult.PackageReader == null)
-            {
-                downloadResourceResult.PackageStream.Seek(0, SeekOrigin.Begin);
-                var zipArchive = new ZipArchive(downloadResourceResult.PackageStream);
-                var packageReader = new PackageReader(zipArchive);
-                downloadResourceResult.PackageStream.Seek(0, SeekOrigin.Begin);
-                downloadResourceResult = new DownloadResourceResult(downloadResourceResult.PackageStream, packageReader);
-            }
-
             return downloadResourceResult;
         }
     }

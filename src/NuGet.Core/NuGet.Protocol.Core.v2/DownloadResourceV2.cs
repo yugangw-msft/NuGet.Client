@@ -114,7 +114,7 @@ namespace NuGet.Protocol.Core.v2
                 // Read the package from the machine cache
                 if (newPackage != null)
                 {
-                    return new DownloadResourceResult(newPackage.GetStream());
+                    return DownloadResourceResult.FromStream(newPackage.GetStream());
                 }
             }
             catch (Exception ex)
@@ -164,30 +164,16 @@ namespace NuGet.Protocol.Core.v2
 
                     if (downloadedPackage != null)
                     {
-                        return new DownloadResourceResult(downloadedPackage.GetStream());
+                        return DownloadResourceResult.FromStream(downloadedPackage.GetStream());
                     }
                 }
             }
             else
             {
                 var package = repository.FindPackage(identity.Id, version);
-
                 if (package != null)
                 {
-                    // Use a folder reader for unzipped repos
-                    if (repository is UnzippedPackageRepository)
-                    {
-                        var packagePath = Path.Combine(repository.Source, identity.Id + "." + version);
-                        var directoryInfo = new DirectoryInfo(packagePath);
-                        if (directoryInfo.Exists)
-                        {
-                            return new DownloadResourceResult(
-                                package.GetStream(),
-                                new PackageFolderReader(directoryInfo));
-                        }
-                    }
-
-                    return new DownloadResourceResult(package.GetStream());
+                    return DownloadResourceResult.FromStream(package.GetStream());
                 }
             }
 

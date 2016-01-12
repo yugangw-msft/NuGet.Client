@@ -1911,7 +1911,7 @@ namespace NuGet.PackageManagement
                         var packagePath = PackagesFolderNuGetProject.GetInstalledPackageFilePath(nuGetProjectAction.PackageIdentity);
                         if (File.Exists(packagePath))
                         {
-                            using (var downloadResourceResult = new DownloadResourceResult(File.OpenRead(packagePath)))
+                            using (var downloadResourceResult = DownloadResourceResult.FromPackageFile(packagePath))
                             {
                                 await ExecuteInstallAsync(nuGetProject, nuGetProjectAction.PackageIdentity, downloadResourceResult, packageWithDirectoriesToBeDeleted, nuGetProjectContext, token);
                             }

@@ -43,12 +43,10 @@ namespace NuGet.Protocol.Core.v3
                     packageIdentity.Version);
 
                 Stream stream = null;
-                PackageReaderBase packageReader = null;
                 try
                 {
                     stream = File.Open(nupkgPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    packageReader = new PackageFolderReader(installPath);
-                    return new DownloadResourceResult(stream, packageReader);
+                    return DownloadResourceResult.FromStream(stream);
                 }
                 catch
                 {
@@ -56,12 +54,6 @@ namespace NuGet.Protocol.Core.v3
                     {
                         stream.Dispose();
                     }
-
-                    if (packageReader != null)
-                    {
-                        packageReader.Dispose();
-                    }
-
                     throw;
                 }
             }

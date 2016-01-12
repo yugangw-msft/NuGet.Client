@@ -15,7 +15,13 @@ namespace NuGet.Protocol.Core.Types
         private readonly Stream _stream;
         private readonly PackageReaderBase _packageReader;
 
-        public DownloadResourceResult(Stream stream)
+        public DownloadResourceResult()
+        {
+            _stream = Stream.Null;
+            _packageReader = null;
+        }
+
+        public DownloadResourceResult(Stream stream, PackageReaderBase packageReader)
         {
             if (stream == null)
             {
@@ -23,12 +29,40 @@ namespace NuGet.Protocol.Core.Types
             }
 
             _stream = stream;
+            _packageReader = packageReader;
         }
 
-        public DownloadResourceResult(Stream stream, PackageReaderBase packageReader)
-            : this(stream)
+        /// <summary>
+        /// Builder method to create new instance
+        /// </summary>
+        /// <param name="stream">File package stream</param>
+        /// <returns>New instance</returns>
+        public static DownloadResourceResult FromStream(Stream stream)
         {
-            _packageReader = packageReader;
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            var packageReader = new PackageReader(stream);
+            return new DownloadResourceResult(stream, packageReader);
+        }
+
+        /// <summary>
+        /// Builder method to create new instance out of a package file
+        /// </summary>
+        /// <param name="packagePath">Path to a package file</param>
+        /// <returns>New instance</returns>
+        public static DownloadResourceResult FromPackageFile(string packagePath)
+        {
+            if (packagePath == null)
+            {
+                throw new ArgumentNullException(nameof(packagePath));
+            }
+
+            var fileStream = File.OpenRead(packagePath);
+            var packageReader = new PackageReader(fileStream);
+            return new DownloadResourceResult(fileStream, packageReader);
         }
 
         /// <summary>

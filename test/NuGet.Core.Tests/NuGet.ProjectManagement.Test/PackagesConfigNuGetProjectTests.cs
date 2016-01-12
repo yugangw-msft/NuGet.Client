@@ -318,7 +318,7 @@ namespace ProjectManagement.Test
 
         private static DownloadResourceResult GetDownloadResourceResult()
         {
-            return new DownloadResourceResult(Stream.Null);
+            return new DownloadResourceResult();
         }
     }
 }

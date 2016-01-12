@@ -395,7 +395,7 @@ namespace NuGet.Test
 
         private static DownloadResourceResult GetDownloadResult(FileInfo packageFileInfo)
         {
-            return new DownloadResourceResult(packageFileInfo.OpenRead());
+            return DownloadResourceResult.FromStream(packageFileInfo.OpenRead());
         }
     }
 }
