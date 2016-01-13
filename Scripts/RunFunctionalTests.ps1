@@ -90,16 +90,24 @@ CleanTempFolder
 
 $dte2 = LaunchVSandGetDTE $VSVersion $VSLaunchWaitTimeInSecs
 
+if (!$dte2)
+{
+    Write-Error 'DTE could not be obtained'
+    exit 1
+}
+
 Write-Host "Launching the Package Manager Console inside VS and waiting for $PMCLaunchWaitTimeInSecs seconds"
 ExecuteCommand $dte2 "View.PackageManagerConsole" $null "Opening NuGet Package Manager Console" $PMCLaunchWaitTimeInSecs
 
+Write-Host "Set the execution policy on the process to be Bypass and wait for a second. This operation is very fast"
+ExecuteCommand $dte2 "View.PackageManagerConsole" "Set-ExecutionPolicy Bypass -Scope Process -Force" "Running command: 'Set-ExecutionPolicy Bypass -Scope Process -Force' ..." 1
 
 Write-Host "Remove any NuGet.Tests module that may have been loaded already and wait for a second. This operation is very fast"
 ExecuteCommand $dte2 "View.PackageManagerConsole" "Get-Module NuGet.Tests | Remove-Module" "Running command: 'Get-Module NuGet.Tests | Remove-Module' ..." 1
 
 $NuGetTestsModulePath = Join-Path $NuGetTestPath "NuGet.Tests.psm1"
-Write-Host "Import NuGet.Tests module from $NuGetTestPath and wait for a second. This operation is very fast"
-ExecuteCommand $dte2 "View.PackageManagerConsole" "Import-Module $NuGetTestsModulePath" "Running command: 'Import-Module $NuGetTestsModulePath' ..." 1
+Write-Host "Import NuGet.Tests module from $NuGetTestPath and wait for 5 seconds."
+ExecuteCommand $dte2 "View.PackageManagerConsole" "Import-Module $NuGetTestsModulePath" "Running command: 'Import-Module $NuGetTestsModulePath' ..." 5
 
 Write-Host "Executing the provided Package manager console command: ""$PMCCommand"""
 ExecuteCommand $dte2 "View.PackageManagerConsole" $PMCCommand "Running command: $PMCCommand ..."
