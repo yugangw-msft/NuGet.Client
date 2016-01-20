@@ -1925,10 +1925,10 @@ namespace NuGet.Configuration.Test
 </configuration>".Replace("\r\n", "\n");
                 Assert.Equal(result, text.Replace("\r\n", "\n"));
 
-                text = File.ReadAllText(Path.Combine(mockBaseDirectory, "NuGet","Config","a1.config"));
+                text = File.ReadAllText(Path.Combine(mockBaseDirectory, "nuget", "Config","a1.config"));
                 Assert.Equal(a1Config, text.Replace("\r\n", "\n"));
 
-                text = File.ReadAllText(Path.Combine(mockBaseDirectory, "NuGet","Config","IDE","a2.config"));
+                text = File.ReadAllText(Path.Combine(mockBaseDirectory, "nuget", "Config","IDE","a2.config"));
                 Assert.Equal(a2Config, text.Replace("\r\n", "\n"));
             } }
 
