@@ -94,7 +94,7 @@ namespace NuGet.Common
                         {
                             return GetEnvironmentVariable("APPDATA");
                         }
-                        else if (RuntimeEnvironmentHelper.IsOSX)
+                        else if (RuntimeEnvironmentHelper.IsMacOSX)
                         {
                             return Path.Combine("Library", "Application Support","NuGet");
                         }
