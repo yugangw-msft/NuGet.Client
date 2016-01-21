@@ -10,6 +10,17 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public interface IScriptExecutor
     {
-        Task<bool> ExecuteAsync(PackageIdentity packageIdentity, string packageInstallPath, string scriptRelativePath, EnvDTEProject envDTEProject, NuGetProject nuGetProject, INuGetProjectContext nuGetProjectContext, bool throwOnFailure);
+        Task<bool> ExecuteAsync(
+            PackageIdentity packageIdentity,
+            string packageInstallPath,
+            string scriptRelativePath,
+            EnvDTEProject envDTEProject,
+            NuGetProject nuGetProject,
+            INuGetProjectContext nuGetProjectContext,
+            bool throwOnFailure);
+
+        bool TryMarkVisited(PackageIdentity packageIdentity, bool initPS1Present);
+
+        Task<bool> ExecuteInitScriptAsync(PackageIdentity packageIdentity);
     }
 }
