@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.Globalization;
 using System.IO;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
@@ -29,15 +29,15 @@ namespace NuGetConsole
     {
         private AsyncLazy<IHost> Host { get; }
         private ISolutionManager SolutionManager { get; }  = ServiceLocator.GetInstance<ISolutionManager>();
+        private string SolutionDirectory { get; set; }
         private ISettings Settings { get; } = ServiceLocator.GetInstance<ISettings>();
-        private static ConcurrentDictionary<PackageIdentity, bool> InitScriptExecutions
+        private ConcurrentDictionary<PackageIdentity, bool> InitScriptExecutions
             = new ConcurrentDictionary<PackageIdentity, bool>(PackageIdentityComparer.Default);
-
-        private bool _skipPSScriptExecution;
 
         public ScriptExecutor()
         {
             Host = new AsyncLazy<IHost>(GetHostAsync, ThreadHelper.JoinableTaskFactory);
+            Reset();
         }
 
         [Import]
@@ -45,6 +45,31 @@ namespace NuGetConsole
 
         [Import]
         public IOutputConsoleProvider OutputConsoleProvider { get; set; }
+
+        public void Reset()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (SolutionManager.IsSolutionAvailable)
+            {
+                SolutionDirectory = SolutionManager.SolutionDirectory;
+            }
+            else
+            {
+                SolutionDirectory = null;
+            }
+
+            var packagesWithoutInitPS1 = InitScriptExecutions.Keys
+                .Where(k => !InitScriptExecutions[k])
+                .ToList();
+
+            InitScriptExecutions.Clear();
+
+            foreach (var item in packagesWithoutInitPS1)
+            {
+                InitScriptExecutions.TryAdd(item, false);
+            }
+        }
 
         public async Task<bool> ExecuteAsync(
             PackageIdentity packageIdentity,
@@ -130,6 +155,12 @@ namespace NuGetConsole
         {
             if (File.Exists(fullScriptPath))
             {
+                if (fullScriptPath.EndsWith(PowerShellScripts.Init, StringComparison.OrdinalIgnoreCase)
+                    && !TryMarkVisited(packageIdentity, true))
+                {
+                    return true;
+                }
+
                 ScriptPackage package = null;
                 if (envDTEProject != null)
                 {
@@ -148,60 +179,48 @@ namespace NuGetConsole
                     package = new ScriptPackage(packageIdentity.Id, packageIdentity.Version.ToString(), packageInstallPath);
                 }
 
-                if (fullScriptPath.EndsWith(PowerShellScripts.Init, StringComparison.OrdinalIgnoreCase))
+                string toolsPath = Path.GetDirectoryName(fullScriptPath);
+                IPSNuGetProjectContext psNuGetProjectContext = nuGetProjectContext as IPSNuGetProjectContext;
+                if (psNuGetProjectContext != null
+                    && psNuGetProjectContext.IsExecuting
+                    && psNuGetProjectContext.CurrentPSCmdlet != null)
                 {
-                    _skipPSScriptExecution = TryMarkVisited(packageIdentity, true);
+                    var psVariable = psNuGetProjectContext.CurrentPSCmdlet.SessionState.PSVariable;
+
+                    // set temp variables to pass to the script
+                    psVariable.Set("__rootPath", packageInstallPath);
+                    psVariable.Set("__toolsPath", toolsPath);
+                    psVariable.Set("__package", package);
+                    psVariable.Set("__project", envDTEProject);
+
+                    psNuGetProjectContext.ExecutePSScript(fullScriptPath, throwOnFailure);
                 }
                 else
                 {
-                    _skipPSScriptExecution = false;
+                    string logMessage = String.Format(CultureInfo.CurrentCulture, Resources.ExecutingScript, fullScriptPath);
+                    // logging to both the Output window and progress window.
+                    nuGetProjectContext.Log(MessageLevel.Info, logMessage);
+                    try
+                    {
+                        await ExecuteScriptCoreAsync(
+                            package,
+                            packageInstallPath,
+                            fullScriptPath,
+                            toolsPath,
+                            envDTEProject);
+                    }
+                    catch (Exception ex)
+                    {
+                        // throwFailure is set by Package Manager.
+                        if (throwOnFailure)
+                        {
+                            throw;
+                        }
+                        nuGetProjectContext.Log(MessageLevel.Warning, ex.Message);
+                    }
                 }
 
-                if (!_skipPSScriptExecution)
-                {
-                    string toolsPath = Path.GetDirectoryName(fullScriptPath);
-                    IPSNuGetProjectContext psNuGetProjectContext = nuGetProjectContext as IPSNuGetProjectContext;
-                    if (psNuGetProjectContext != null
-                        && psNuGetProjectContext.IsExecuting
-                        && psNuGetProjectContext.CurrentPSCmdlet != null)
-                    {
-                        var psVariable = psNuGetProjectContext.CurrentPSCmdlet.SessionState.PSVariable;
-
-                        // set temp variables to pass to the script
-                        psVariable.Set("__rootPath", packageInstallPath);
-                        psVariable.Set("__toolsPath", toolsPath);
-                        psVariable.Set("__package", package);
-                        psVariable.Set("__project", envDTEProject);
-
-                        psNuGetProjectContext.ExecutePSScript(fullScriptPath, throwOnFailure);
-                    }
-                    else
-                    {
-                        string logMessage = String.Format(CultureInfo.CurrentCulture, Resources.ExecutingScript, fullScriptPath);
-                        // logging to both the Output window and progress window.
-                        nuGetProjectContext.Log(MessageLevel.Info, logMessage);
-                        try
-                        {
-                            await ExecuteScriptCoreAsync(
-                                package,
-                                packageInstallPath,
-                                fullScriptPath,
-                                toolsPath,
-                                envDTEProject);
-                        }
-                        catch (Exception ex)
-                        {
-                            // throwFailure is set by Package Manager. 
-                            if (throwOnFailure)
-                            {
-                                throw;
-                            }
-                            nuGetProjectContext.Log(MessageLevel.Warning, ex.Message);
-                        }
-                    }
-
-                    return true;
-                }
+                return true;
             }
             else
             {
@@ -219,9 +238,9 @@ namespace NuGetConsole
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string effectiveGlobalPackagesFolder = null;
-            if (SolutionManager.IsSolutionAvailable)
+            if (string.IsNullOrEmpty(SolutionDirectory))
             {
-                var packagesFolder = PackagesFolderPathUtility.GetPackagesFolderPath(SolutionManager, Settings);
+                var packagesFolder = PackagesFolderPathUtility.GetPackagesFolderPath(SolutionDirectory, Settings);
                 var packagePathResolver = new PackagePathResolver(packagesFolder);
                 var packageInstalledPath = packagePathResolver.GetInstalledPath(packageIdentity);
 
@@ -229,7 +248,7 @@ namespace NuGetConsole
                 {
                     // Package not found in packages folder
                     effectiveGlobalPackagesFolder = BuildIntegratedProjectUtility.GetEffectiveGlobalPackagesFolder(
-                                                            SolutionManager.SolutionDirectory,
+                                                            SolutionDirectory,
                                                             Settings);
                 }
                 else

@@ -239,6 +239,8 @@ namespace NuGetConsole.Host.PowerShell.Implementation
                             // Hook up solution events
                             _solutionManager.SolutionOpened += (o, e) =>
                                 {
+                                    _scriptExecutor.Reset();
+
                                     // Solution opened event is raised on the UI thread
                                     // Go off the UI thread before calling likely expensive call of ExecuteInitScriptsAsync
                                     // Also, it uses semaphores, do not call it from the UI thread

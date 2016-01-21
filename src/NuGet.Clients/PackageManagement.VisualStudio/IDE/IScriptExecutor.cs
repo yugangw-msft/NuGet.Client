@@ -10,6 +10,8 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public interface IScriptExecutor
     {
+        void Reset();
+
         Task<bool> ExecuteAsync(
             PackageIdentity packageIdentity,
             string packageInstallPath,
