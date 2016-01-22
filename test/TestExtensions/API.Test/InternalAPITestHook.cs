@@ -1,4 +1,6 @@
-﻿using NuGet.PackageManagement.VisualStudio;
+﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Threading;
+using NuGet.PackageManagement.VisualStudio;
 using NuGet.VisualStudio;
 
 namespace API.Test
@@ -56,6 +58,15 @@ namespace API.Test
                 restorer.RestorePackages(project);
                 return;
             }
+        }
+
+        public static bool ExecuteInitScript(string id, string version)
+        {
+            IVsScriptExecutor scriptExecutor = ServiceLocator.GetInstance<IVsScriptExecutor>();
+            return ThreadHelper.JoinableTaskFactory.Run<bool>(async delegate
+            {
+                return await scriptExecutor.ExecuteInitScriptAsync(id, version);
+            });
         }
     }
 }
