@@ -1,16 +1,17 @@
 ﻿using System;
-using NuGet.Shared;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NuGet.Frameworks
 {
     public class FallbackFramework : NuGetFramework, IEquatable<FallbackFramework>
     {
         /// <summary>
-        /// Secondary framework to fall back to.
+        /// Frameworks to fall back to, in order of precedence.
         /// </summary>
-        public NuGetFramework Fallback { get; }
+        public IList<NuGetFramework> Fallback { get; }
 
-        public FallbackFramework(NuGetFramework framework, NuGetFramework fallbackFramework)
+        public FallbackFramework(NuGetFramework framework, IList<NuGetFramework> fallbackFrameworks)
             : base(framework)
         {
             if (framework == null)
@@ -18,12 +19,12 @@ namespace NuGet.Frameworks
                 throw new ArgumentNullException(nameof(framework));
             }
 
-            if (fallbackFramework == null)
+            if (fallbackFrameworks == null)
             {
-                throw new ArgumentNullException(nameof(fallbackFramework));
+                throw new ArgumentNullException(nameof(fallbackFrameworks));
             }
 
-            Fallback = fallbackFramework;
+            Fallback = fallbackFrameworks;
         }
 
         public override bool Equals(object obj)
@@ -36,7 +37,10 @@ namespace NuGet.Frameworks
             var combiner = new HashCodeCombiner();
 
             combiner.AddInt32(NuGetFramework.Comparer.GetHashCode(this));
-            combiner.AddInt32(NuGetFramework.Comparer.GetHashCode(Fallback));
+            foreach (var fallback in Fallback)
+            {
+                combiner.AddInt32(NuGetFramework.Comparer.GetHashCode(fallback));
+            }
 
             return combiner.CombinedHash;
         }
@@ -54,7 +58,7 @@ namespace NuGet.Frameworks
             }
 
             return NuGetFramework.Comparer.Equals(this, other)
-                && NuGetFramework.Comparer.Equals(Fallback, other.Fallback);
+                   && Fallback.SequenceEqual(other.Fallback, NuGetFramework.Comparer);
         }
     }
 }

@@ -104,7 +104,7 @@ namespace NuGet.Commands.Test
                 var lockFileFormat = new LockFileFormat();
                 var logger = new TestLogger();
                 var command = new RestoreCommand(logger, request);
-                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), NuGetFramework.Parse("portable-net452+win81"));
+                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), new[] { NuGetFramework.Parse("portable-net452+win81") });
 
                 // Act
                 var result = await command.ExecuteAsync();
@@ -157,7 +157,7 @@ namespace NuGet.Commands.Test
                 var lockFileFormat = new LockFileFormat();
                 var logger = new TestLogger();
                 var command = new RestoreCommand(logger, request);
-                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), NuGetFramework.Parse("portable-net452+win81"));
+                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), new[] { NuGetFramework.Parse("portable-net452+win81") });
                 var result = await command.ExecuteAsync();
                 result.Commit(logger);
                 logger.Clear();
@@ -270,7 +270,7 @@ namespace NuGet.Commands.Test
                 var lockFileFormat = new LockFileFormat();
                 var logger = new TestLogger();
                 var command = new RestoreCommand(logger, request);
-                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), NuGetFramework.Parse("portable-net452+win81"));
+                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), new[] { NuGetFramework.Parse("portable-net452+win81") });
                 var warning = "Package 'Newtonsoft.Json 7.0.1' was restored using '.NETPortable,Version=v0.0,Profile=net452+win81' instead the project target framework '.NETPlatform,Version=v5.0'. This may cause compatibility problems.";
 
                 // Act
@@ -320,7 +320,7 @@ namespace NuGet.Commands.Test
                 var lockFileFormat = new LockFileFormat();
                 var logger = new TestLogger();
                 var command = new RestoreCommand(logger, request);
-                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), NuGetFramework.Parse("portable-net452+win81"));
+                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), new[] { NuGetFramework.Parse("portable-net452+win81") });
 
                 // Act
                 var result = await command.ExecuteAsync();
@@ -372,7 +372,7 @@ namespace NuGet.Commands.Test
                 var lockFileFormat = new LockFileFormat();
                 var logger = new TestLogger();
                 var command = new RestoreCommand(logger, request);
-                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), NuGetFramework.Parse("portable-net452+win81"));
+                var framework = new FallbackFramework(NuGetFramework.Parse("dotnet"), new[] { NuGetFramework.Parse("portable-net452+win81") });
                 var result = await command.ExecuteAsync();
                 result.Commit(logger);
 

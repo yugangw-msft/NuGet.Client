@@ -40,23 +40,31 @@ namespace NuGet.Frameworks
         /// <summary>
         /// Returns the nearest matching framework that is compatible.
         /// </summary>
-        /// <param name="framework">Project target framework</param>
+        /// <param name="projectFramework">Project target framework</param>
         /// <param name="possibleFrameworks">Possible frameworks to narrow down</param>
         /// <returns>Nearest compatible framework. If no frameworks are compatible null is returned.</returns>
-        public NuGetFramework GetNearest(NuGetFramework framework, IEnumerable<NuGetFramework> possibleFrameworks)
+        public NuGetFramework GetNearest(NuGetFramework projectFramework, IEnumerable<NuGetFramework> possibleFrameworks)
         {
-            var nearest = GetNearestInternal(framework, possibleFrameworks);
-
-            var fallbackFramework = framework as FallbackFramework;
+            var projectFrameworks = new[] { projectFramework }.AsEnumerable();
+            var fallbackFramework = projectFramework as FallbackFramework;
 
             if (fallbackFramework != null)
             {
-                if (nearest == null || nearest.IsAny)
-                {
-                    nearest = GetNearestInternal(fallbackFramework.Fallback, possibleFrameworks);
-                }
+                projectFrameworks = projectFrameworks.Concat(fallbackFramework.Fallback);
             }
 
+            NuGetFramework nearest = null;
+
+            foreach (var framework in projectFrameworks)
+            {
+                if (nearest != null && !nearest.IsAny)
+                {
+                    break;
+                }
+
+                nearest = GetNearestInternal(framework, possibleFrameworks);
+            }
+            
             return nearest;
         }
 

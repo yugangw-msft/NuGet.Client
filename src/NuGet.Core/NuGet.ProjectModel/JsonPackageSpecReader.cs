@@ -384,21 +384,21 @@ namespace NuGet.ProjectModel
 
             var properties = targetFramework.Value.Value<JObject>();
 
-            var importFramework = GetImports(properties);
+            var importFrameworks = GetImports(properties).ToList();
 
             // If a fallback framework exists, update the framework to contain both.
             var updatedFramework = frameworkName;
 
-            if (importFramework != null)
+            if (importFrameworks.Any())
             {
-                updatedFramework = new FallbackFramework(frameworkName, importFramework);
+                updatedFramework = new FallbackFramework(frameworkName, importFrameworks);
             }
 
             var targetFrameworkInformation = new TargetFrameworkInformation
             {
                 FrameworkName = updatedFramework,
                 Dependencies = new List<LibraryDependency>(),
-                Imports = GetImports(properties),
+                Imports = importFrameworks.ToList(), // clone the list
                 Warn = GetWarnSetting(properties)
             };
 
@@ -424,24 +424,18 @@ namespace NuGet.ProjectModel
             return true;
         }
 
-        private static NuGetFramework GetImports(JObject properties)
+        private static IEnumerable<NuGetFramework> GetImports(JObject properties)
         {
-            NuGetFramework framework = null;
+            var importsArray = properties["imports"];
 
-            var importsProperty = properties["imports"];
-
-            if (importsProperty != null)
+            if (importsArray == null || importsArray.Type != JTokenType.Array)
             {
-                var importFramework = NuGetFramework.Parse(importsProperty.ToString());
-
-                if (importFramework.IsPCL)
-                {
-                    // PCLs are the only frameworks allowed here, other values will be ignored
-                    framework = importFramework;
-                }
+                importsArray = new JArray(importsArray);
             }
 
-            return framework;
+            return importsArray
+                .Where(v => v != null && v.Type == JTokenType.String)
+                .Select(v => NuGetFramework.Parse(v.ToString()));
         }
 
         private static bool GetWarnSetting(JObject properties)
