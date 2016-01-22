@@ -6,11 +6,10 @@
   </PropertyGroup>
 
   <Import Project="$(VSToolsPath)\DNX\Microsoft.DNX.Props" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="..\..\..\build\Common.xproj.props" Condition="Exists('..\..\..\Build\Common.xproj.props')" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>ca92bd12-5500-4809-b998-f6ecdd9dd79b</ProjectGuid>
     <RootNamespace>NuGet.Shared</RootNamespace>
-    <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">..\..\..\artifacts\obj\$(MSBuildProjectName)</BaseIntermediateOutputPath>
-    <OutputPath Condition="'$(OutputPath)'=='' ">..\..\..\artifacts\bin\$(MSBuildProjectName)\</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
