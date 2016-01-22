@@ -103,7 +103,7 @@ namespace NuGetConsole
             if (TryMarkVisited(packageIdentity, false))
             {
                 var packageInstalledPath = await GetPackageInstalledPathAsync(packageIdentity);
-                if (string.IsNullOrEmpty(packageInstalledPath))
+                if (!string.IsNullOrEmpty(packageInstalledPath))
                 {
                     var initPS1Path = Path.Combine(packageInstalledPath, "tools", PowerShellScripts.Init);
                     if (File.Exists(initPS1Path))
@@ -238,7 +238,7 @@ namespace NuGetConsole
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string effectiveGlobalPackagesFolder = null;
-            if (string.IsNullOrEmpty(SolutionDirectory))
+            if (!string.IsNullOrEmpty(SolutionDirectory))
             {
                 var packagesFolder = PackagesFolderPathUtility.GetPackagesFolderPath(SolutionDirectory, Settings);
                 var packagePathResolver = new PackagePathResolver(packagesFolder);

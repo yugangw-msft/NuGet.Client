@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.Threading;
 using NuGet.PackageManagement.VisualStudio;
 using NuGet.VisualStudio;
+using Task = System.Threading.Tasks.Task;
 
 namespace API.Test
 {
@@ -63,10 +64,14 @@ namespace API.Test
         public static bool ExecuteInitScript(string id, string version)
         {
             IVsScriptExecutor scriptExecutor = ServiceLocator.GetInstance<IVsScriptExecutor>();
-            return ThreadHelper.JoinableTaskFactory.Run<bool>(async delegate
+            var task = Task.Run(async () => await scriptExecutor.ExecuteInitScriptAsync(id, version));
+
+            if (task.IsCompleted)
             {
-                return await scriptExecutor.ExecuteInitScriptAsync(id, version);
-            });
+                return task.Result;
+            }
+
+            return false;
         }
     }
 }

@@ -498,7 +498,7 @@ function Test-ExecuteInitPS1
     Assert-True ($global:PackageInitPS1Var -eq 1)
 
     # Act
-    $result = [API.Test.InternalAPITestHook]::ExecuteInitScript("PackageInitPS1", "1.0.0")
+    $result = [API.Test.InternalAPITestHook]::ExecuteInitScript("PackageInitPS1","1.0.0")
 
     Assert-True $result
 
@@ -518,7 +518,7 @@ function Test-ExecuteInitPS1OnProjectK
     Assert-True ($global:PackageInitPS1Var -eq 0)
 
     # Act
-    $result = [API.Test.InternalAPITestHook]::ExecuteInitScript("PackageInitPS1", "1.0.0")
+    $result = [API.Test.InternalAPITestHook]::ExecuteInitScript("PackageInitPS1","1.0.0")
 
     Assert-True $result
 

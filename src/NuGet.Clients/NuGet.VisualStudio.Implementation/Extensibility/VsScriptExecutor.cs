@@ -11,21 +11,17 @@ namespace NuGet.VisualStudio
     [Export(typeof(IVsScriptExecutor))]
     public class VsScriptExecutor : IVsScriptExecutor
     {
-        private Configuration.ISettings Settings { get; }
         private IScriptExecutor ScriptExecutor { get; }
 
         [ImportingConstructor]
-        public VsScriptExecutor(Configuration.ISettings settings, IScriptExecutor scriptExecutor)
+        public VsScriptExecutor(IScriptExecutor scriptExecutor)
         {
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
-
             if (scriptExecutor == null)
             {
                 throw new ArgumentNullException(nameof(scriptExecutor));
             }
+
+            ScriptExecutor = scriptExecutor;
         }
 
         public Task<bool> ExecuteInitScriptAsync(string packageId, string packageVersion)
