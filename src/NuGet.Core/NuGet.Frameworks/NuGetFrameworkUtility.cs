@@ -121,7 +121,7 @@ namespace NuGet.Frameworks
 
             if (fallbackFramework != null)
             {
-                projectFrameworks = projectFrameworks.Concat(fallbackFramework.Fallback);
+                projectFrameworks = projectFrameworks.Concat(fallbackFramework.FallbackPrecedence);
             }
 
             return projectFrameworks.Any(f => DefaultCompatibilityProvider.Instance.IsCompatible(f, candidate));

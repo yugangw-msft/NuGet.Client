@@ -807,14 +807,14 @@ namespace NuGet.Commands
                             targetGraph,
                             resolver,
                             correctedPackageName: library.Name,
-                            targetFrameworkOverride: nonFallbackFramework,
                             dependencyType: includeFlags,
+                            targetFrameworkOverride: nonFallbackFramework,
                             dependencies: graphItem.Data.Dependencies);
 
                         if (!targetLibrary.Equals(targetLibraryWithoutFallback))
                         {
                             var libraryName = $"{library.Name} {library.Version}";
-                            _logger.LogWarning(Strings.FormatLog_ImportsFallbackWarning(libraryName, fallbackFramework.Fallback, nonFallbackFramework));
+                            _logger.LogWarning(Strings.FormatLog_ImportsFallbackWarning(libraryName, fallbackFramework.FallbackPrecedence, nonFallbackFramework));
 
                             // only log the warning once per library
                             librariesWithWarnings.Add(library);

@@ -50,7 +50,7 @@ namespace NuGet.Frameworks
 
             if (fallbackFramework != null)
             {
-                projectFrameworks = projectFrameworks.Concat(fallbackFramework.Fallback);
+                projectFrameworks = projectFrameworks.Concat(fallbackFramework.FallbackPrecedence);
             }
 
             NuGetFramework nearest = null;

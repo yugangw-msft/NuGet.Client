@@ -9,9 +9,9 @@ namespace NuGet.Frameworks
         /// <summary>
         /// Frameworks to fall back to, in order of precedence.
         /// </summary>
-        public IList<NuGetFramework> Fallback { get; }
+        public IList<NuGetFramework> FallbackPrecedence { get; }
 
-        public FallbackFramework(NuGetFramework framework, IList<NuGetFramework> fallbackFrameworks)
+        public FallbackFramework(NuGetFramework framework, IList<NuGetFramework> fallbackPrecedence)
             : base(framework)
         {
             if (framework == null)
@@ -19,12 +19,12 @@ namespace NuGet.Frameworks
                 throw new ArgumentNullException(nameof(framework));
             }
 
-            if (fallbackFrameworks == null)
+            if (fallbackPrecedence == null)
             {
-                throw new ArgumentNullException(nameof(fallbackFrameworks));
+                throw new ArgumentNullException(nameof(fallbackPrecedence));
             }
 
-            Fallback = fallbackFrameworks;
+            FallbackPrecedence = fallbackPrecedence;
         }
 
         public override bool Equals(object obj)
@@ -37,7 +37,7 @@ namespace NuGet.Frameworks
             var combiner = new HashCodeCombiner();
 
             combiner.AddInt32(NuGetFramework.Comparer.GetHashCode(this));
-            foreach (var fallback in Fallback)
+            foreach (var fallback in FallbackPrecedence)
             {
                 combiner.AddInt32(NuGetFramework.Comparer.GetHashCode(fallback));
             }
@@ -58,7 +58,7 @@ namespace NuGet.Frameworks
             }
 
             return NuGetFramework.Comparer.Equals(this, other)
-                   && Fallback.SequenceEqual(other.Fallback, NuGetFramework.Comparer);
+                   && FallbackPrecedence.SequenceEqual(other.FallbackPrecedence, NuGetFramework.Comparer);
         }
     }
 }
