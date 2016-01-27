@@ -10,10 +10,11 @@ using NuGet.Logging;
 using NuGet.Packaging;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
+using NuGet.Protocol.Core.v3.Data;
 
-namespace NuGet
+namespace NuGet.Protocol.Core.v3
 {
-    public class PackageUploader
+    public class PackageUploader //: HttpHandlerResourceV3Provider
     {
         private const string ServiceEndpoint = "/api/v2/package";
         private const string ApiKeyHeader = "X-NuGet-ApiKey";
@@ -21,7 +22,7 @@ namespace NuGet
 
         private Uri _baseUri;
         private readonly string _userAgent;
-
+        
         public PackageUploader(string source, string userAgent, ILogger logger)
         {
             if (String.IsNullOrEmpty(source))
@@ -76,7 +77,11 @@ namespace NuGet
             string pathToPackage,
             CancellationToken token)
         {
-            using (var client = new HttpClient())
+            //var packageSrc = new Configuration.PackageSource(Source.ToString());
+            //var sourceRepo = new SourceRepository(packageSrc, new INuGetResourceProvider[] { });
+            //Tuple<bool, INuGetResource> handler = await TryCreate(sourceRepo, token);
+            var client = new DataClient();
+            using (client)
             using (var fileStream = new FileStream(pathToPackage, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var request = new HttpRequestMessage(HttpMethod.Put, GetServiceEndpointUrl(string.Empty)))
             {
