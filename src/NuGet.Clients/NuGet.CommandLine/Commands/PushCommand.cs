@@ -31,6 +31,8 @@ namespace NuGet.CommandLine
         [Option(typeof(NuGetCommand), "PushCommandDisableBufferingDescription")]
         public bool DisableBuffering { get; set; }
 
+        private PushResourceV2 _pushResource;
+
         public override async Task ExecuteCommandAsync()
         {
             // First argument should be the package
@@ -38,7 +40,15 @@ namespace NuGet.CommandLine
 
             // Don't push symbols by default
             string source = ResolveSource(packagePath, ConfigurationDefaults.Instance.DefaultPushSource);
-            var pushEndpoint = await GetPushEndpointAsync(source);
+
+            var packageSource = new Configuration.PackageSource(source);
+
+            var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
+
+            var sourceRepository = sourceRepositoryProvider.CreateRepository(packageSource);
+            _pushResource = await sourceRepository.GetResourceAsync<PushResourceV2>();
+
+            var pushEndpoint = _pushResource.GetPushEndpoint();
 
             if (string.IsNullOrEmpty(pushEndpoint))
             {
@@ -88,24 +98,6 @@ namespace NuGet.CommandLine
                     throw exception;
                 }
             }
-        }
-
-        private async Task<string> GetPushEndpointAsync(string source)
-        {
-            var packageSource = new Configuration.PackageSource(source);
-
-            var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
-
-            var sourceRepository = sourceRepositoryProvider.CreateRepository(packageSource);
-            var pushCommandResource = await sourceRepository.GetResourceAsync<PushCommandResource>();
-
-            if (pushCommandResource != null)
-            {
-                var pushEndpoint = pushCommandResource.GetPushEndpoint();
-                return pushEndpoint;
-            }
-
-            return source;
         }
 
         private string ResolveSource(string packagePath, string configurationDefaultPushSource = null)
@@ -173,7 +165,6 @@ namespace NuGet.CommandLine
         private async Task PushPackage(string packagePath, string source, string apiKey, CancellationToken token)
         {
             var userAgent = UserAgent.CreateUserAgentString(CommandLineConstants.UserAgent);
-            var packageServer = new PackageUploader(source, userAgent, Console);
 
             IEnumerable<string> packagesToPush = GetPackagesToPush(packagePath);
 
@@ -181,13 +172,12 @@ namespace NuGet.CommandLine
 
             foreach (string packageToPush in packagesToPush)
             {
-                await PushPackageCore(source, apiKey, packageServer, packageToPush, token);
+                await PushPackageCore(source, apiKey, packageToPush, token);
             }
         }
 
         private async Task PushPackageCore(string source,
             string apiKey,
-            PackageUploader packageServer,
             string packageToPush,
             CancellationToken token)
         {
@@ -200,10 +190,11 @@ namespace NuGet.CommandLine
             Console.WriteLine(LocalizedResourceManager.GetString("PushCommandPushingPackage"),
                 package.GetFullName(), sourceName);
 
-            await packageServer.PushPackage(
+            await _pushResource.PushPackage(
                 apiKey,
                 packageToPush,
                 new FileInfo(packageToPush).Length,
+                Console,
                 token);
 
             Console.WriteLine(LocalizedResourceManager.GetString("PushCommandPackagePushed"));
