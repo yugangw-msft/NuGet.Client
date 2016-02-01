@@ -13,7 +13,7 @@ using NuGet.Versioning;
 using NuGet.Configuration;
 using NuGet.Protocol.Core;
 
-namespace NuGet
+namespace NuGet.Protocol.Core.Types.Push
 {
     public class PackageUploader
     {
@@ -60,7 +60,8 @@ namespace NuGet
         {
             if (_source.IsFile)
             {
-                //PushPackageToFileSystem(Source.LocalPath, pathToPackage);
+                var package = new OptimizedZipPackage(pathToPackage);
+                PushPackageToFileSystem(new PhysicalFileSystem(_source.AbsolutePath),  package);
             }
             else
             {
@@ -154,15 +155,15 @@ namespace NuGet
         ///// </summary>
         ///// <param name="fileSystem">The FileSystem that the package is pushed to.</param>
         ///// <param name="package">The package to be pushed.</param>
-        //private static void PushPackageToFileSystem(IFileSystem fileSystem, IPackage package)
-        //{
-        //    var pathResolver = new DefaultPackagePathResolver(fileSystem);
-        //    var packageFileName = pathResolver.GetPackageFileName(package);
-        //    using (var stream = package.GetStream())
-        //    {
-        //        fileSystem.AddFile(packageFileName, stream);
-        //    }
-        //}
+        private static void PushPackageToFileSystem(IFileSystem fileSystem, IPackage package)
+        {
+            var pathResolver = new DefaultPackagePathResolver(fileSystem);
+            var packageFileName = pathResolver.GetPackageFileName(package);
+            using (var stream = package.GetStream())
+            {
+                fileSystem.AddFile(packageFileName, stream);
+            }
+        }
 
         /// <summary>
         /// Deletes a package from the Source.
@@ -266,15 +267,15 @@ namespace NuGet
         ///// <param name="fileSystem">The FileSystem where the specified package is deleted.</param>
         ///// <param name="packageId">The package Id.</param>
         ///// <param name="packageVersion">The package Id.</param>
-        //private static void DeletePackageFromFileSystem(IFileSystem fileSystem, string packageId, string packageVersion)
-        //{
-        //    var resolver = new PackagePathResolver(string.Empty, false);
-        //    resolver.GetPackageFileName(new Packaging.Core.PackageIdentity(packageId, new NuGetVersion(packageVersion)));
+        private static void DeletePackageFromFileSystem(IFileSystem fileSystem, string packageId, string packageVersion)
+        {
+            var resolver = new PackagePathResolver(string.Empty, false);
+            resolver.GetPackageFileName(new Packaging.Core.PackageIdentity(packageId, new NuGetVersion(packageVersion)));
 
-        //    var pathResolver = new DefaultPackagePathResolver(fileSystem);
-        //    var packageFileName = pathResolver.GetPackageFileName(packageId, new NuGetVersion(packageVersion));
-        //    fileSystem.DeleteFile(packageFileName);
-        //}
+            var pathResolver = new DefaultPackagePathResolver(fileSystem);
+            var packageFileName = pathResolver.GetPackageFileName(packageId, new NuGetVersion(packageVersion));
+            fileSystem.DeleteFile(packageFileName);
+        }
 
 
         /// <summary>
