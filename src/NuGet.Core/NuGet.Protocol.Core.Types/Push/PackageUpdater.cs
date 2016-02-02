@@ -162,11 +162,20 @@ namespace NuGet.Protocol.Core.Types
             PackageArchiveReader reader = new PackageArchiveReader(pathToPackage);
             PackageIdentity packageIdentity = reader.GetIdentity();
 
-            //TODD: disucss with nuget team for whether or not support V3 repo style
-            var pathResolver = new PackagePathResolver(root, useSideBySidePaths: true);
-            var packageFileName = pathResolver.GetPackageFileName(packageIdentity);
-
-            string fullPath = Path.Combine(root, packageFileName);
+            string fullPath = string.Empty;
+            if (IsV2StyleRepository(root))
+            {
+                var pathResolver = new PackagePathResolver(root, useSideBySidePaths: true);
+                var packageFileName = pathResolver.GetPackageFileName(packageIdentity);
+                fullPath = Path.Combine(root, packageFileName);
+            }
+            else
+            {
+                //TODO: need to create a folder path, along the way/
+                var pathResolver = new VersionFolderPathResolver(root);
+                fullPath = pathResolver.GetPackageFilePath(packageIdentity.Id,
+                    packageIdentity.Version);
+            }
            
             File.Copy(pathToPackage, fullPath, true);
         }
@@ -273,12 +282,22 @@ namespace NuGet.Protocol.Core.Types
         private void DeletePackageFromFileSystem(string packageId, string packageVersion, ILogger logger)
         {
             string root = _source.LocalPath;
-            var resolver = new PackagePathResolver(_source.AbsolutePath, useSideBySidePaths: true);
-            resolver.GetPackageFileName(new Packaging.Core.PackageIdentity(packageId, new NuGetVersion(packageVersion)));
-            var packageIdentity = new PackageIdentity(packageId, new NuGetVersion(packageVersion));
-            var packageFileName = resolver.GetPackageFileName(packageIdentity);
+            var fullPath = string.Empty;
 
-            var fullPath = Path.Combine(root, packageFileName);
+            if (IsV2StyleRepository(root))
+            {
+                var resolver = new PackagePathResolver(_source.AbsolutePath, useSideBySidePaths: true);
+                resolver.GetPackageFileName(new Packaging.Core.PackageIdentity(packageId, new NuGetVersion(packageVersion)));
+                var packageIdentity = new PackageIdentity(packageId, new NuGetVersion(packageVersion));
+                var packageFileName = resolver.GetPackageFileName(packageIdentity);
+                fullPath = Path.Combine(root, packageFileName);
+            }
+            else
+            {
+                var pathResolver = new VersionFolderPathResolver(root);
+                fullPath = pathResolver.GetPackageFilePath(packageId, new NuGetVersion(packageVersion));
+            }
+
             MakeFileWritable(fullPath);
             File.Delete(fullPath);
         }
