@@ -37,15 +37,16 @@ namespace NuGet.CommandLine
 
             //If the user passed a source use it for the gallery location
             string source = SourceProvider.ResolveAndValidateSource(Source) ?? NuGetConstants.DefaultGalleryServerUrl;
+
+            //Setup repository
             var packageSource = new Configuration.PackageSource(source);
-
             var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
-
             var sourceRepository = sourceRepositoryProvider.CreateRepository(packageSource);
-            //TODO: rename the resource.
-            PushCommandResource pushCommandResource = await sourceRepository.GetResourceAsync<PushCommandResource>();
 
-            var gallery = pushCommandResource.GetPackageUpdater();
+            //TODO: Consider a better resource name, like PackageUpdaterResource
+            //Do it after the common hander resource is available, to avoid throw away code.
+            PushCommandResource pushCommandResource = await sourceRepository.GetResourceAsync<PushCommandResource>();
+            var packageUpdater = pushCommandResource.GetPackageUpdater();
 
             //If the user did not pass an API Key look in the config file
             string apiKey = GetApiKey(source);
@@ -60,7 +61,7 @@ namespace NuGet.CommandLine
                 Console.WriteLine(LocalizedResourceManager.GetString("DeleteCommandDeletingPackage"), packageId, packageVersion, sourceDisplayName);
                 var userAgent = UserAgent.CreateUserAgentString(CommandLineConstants.UserAgent);
                 //TODO: confirm, no timeout on delete command?
-                await gallery.DeletePackage(apiKey, packageId, packageVersion, userAgent, Console, CancellationToken.None);
+                await packageUpdater.DeletePackage(apiKey, packageId, packageVersion, userAgent, Console, CancellationToken.None);
                 Console.WriteLine(LocalizedResourceManager.GetString("DeleteCommandDeletedPackage"), packageId, packageVersion);
             }
             else

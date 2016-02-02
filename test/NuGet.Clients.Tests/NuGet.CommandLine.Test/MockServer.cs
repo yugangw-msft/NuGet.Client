@@ -103,7 +103,8 @@ namespace NuGet.CommandLine.Test
             if (bodyEndIndex == -1)
             {
                 //Patch, to deal with new binary format coming with the HttpClient
-                //from dnxcore50
+                //from dnxcore50. The right way should use existing libraries with
+                //multi-part parsers
                 byte[] delimiter2 = Encoding.UTF8.GetBytes("\r\n--");
                 bodyEndIndex = Find(buffer, 0, delimiter2);
                 if (bodyEndIndex == -1)

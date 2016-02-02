@@ -8,12 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Logging;
 using NuGet.Packaging;
-using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 using NuGet.Configuration;
-using NuGet.Protocol.Core;
 using NuGet.Packaging.Core;
-using System.Linq;
 
 namespace NuGet.Protocol.Core.Types
 {
@@ -21,7 +18,8 @@ namespace NuGet.Protocol.Core.Types
     {
         private const string ServiceEndpoint = "/api/v2/package";
         private const string ApiKeyHeader = "X-NuGet-ApiKey";
-        private const int MaxRediretionCount = 20;
+
+        //TODO remove these fields, when we have a consolidated common http handler resource to use.
         private readonly Func<Task<HttpHandlerResource>> _messageHandlerFactory;
         private readonly Func<Uri, CancellationToken, Task<ICredentials>> _promptForCredentials;
         private readonly Action<Uri, ICredentials> _credentialsSuccessfullyUsed;
@@ -50,9 +48,11 @@ namespace NuGet.Protocol.Core.Types
         /// Pushes a package to the Source.
         /// </summary>
         /// <param name="apiKey">API key to be used to push the package.</param>
-        /// <param name="package">The package to be pushed.</param>
-        /// <param name="timeout">Time in milliseconds to timeout the server request.</param>
-        /// <param name="disableBuffering">Indicates if HttpWebRequest buffering should be disabled.</param>
+        /// <param name="pathToPackage">The path of package to be pushed.</param>
+        /// <param name="packageSize">The size of package to be pushed.</param>
+        /// <param name="userAgent">The http agent</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="token">The cancellation token</param>
         public async Task PushPackage(string apiKey,
             string pathToPackage,
             long packageSize,
@@ -71,13 +71,15 @@ namespace NuGet.Protocol.Core.Types
         }
 
         /// <summary>
-        /// Pushes a package to the server that is represented by the stream.
+        /// Pushes a package to the Http server.
         /// </summary>
         /// <param name="apiKey">API key to be used to push the package.</param>
-        /// <param name="packageStreamFactory">A delegate which can be used to open a stream for the package file.</param>
-        /// <param name="contentLength">Size of the package to be pushed.</param>
+        /// <param name="pathToPackage">The path of the package to be pushed </param>
+        /// <param name="packageSzie">Size of the package to be pushed.</param>
         /// <param name="timeout">Time in milliseconds to timeout the server request.</param>
-        /// <param name="disableBuffering">Disable buffering.</param>
+        /// <param name="userAgent">The http agent</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="token">The cancellation token</param>
         private async Task PushPackageToServer(
             string apiKey,
             string pathToPackage,
@@ -154,29 +156,30 @@ namespace NuGet.Protocol.Core.Types
         /// <summary>
         /// Pushes a package to a FileSystem.
         /// </summary>
-        /// <param name="fileSystem">The FileSystem that the package is pushed to.</param>
-        /// <param name="package">The package to be pushed.</param>
+        /// <param name="pathToPackage">The path of package to be pushed.</param>
         private void PushPackageToFileSystem(string pathToPackage)
         {
             string root = _source.LocalPath;
             PackageArchiveReader reader = new PackageArchiveReader(pathToPackage);
             PackageIdentity packageIdentity = reader.GetIdentity();
 
-            //TODD: disucss with nuget team for whether or not support V3 repo style
+            //TODD: support V3 repo style if detect it is
             var pathResolver = new PackagePathResolver(root, useSideBySidePaths: true);
             var packageFileName = pathResolver.GetPackageFileName(packageIdentity);
 
             string fullPath = Path.Combine(root, packageFileName);
-           
             File.Copy(pathToPackage, fullPath, true);
         }
 
         /// <summary>
-        /// Deletes a package from the Source.
+        /// Deletes a package from a Http server.
         /// </summary>
         /// <param name="apiKey">API key to be used to delete the package.</param>
         /// <param name="packageId">The package Id.</param>
         /// <param name="packageVersion">The package version.</param>
+        /// <param name="userAgent">The Http agent</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="token">The cancellation token</param>
         public async Task DeletePackage(string apiKey,
             string packageId,
             string packageVersion,
@@ -196,11 +199,14 @@ namespace NuGet.Protocol.Core.Types
         }
 
         /// <summary>
-        /// Deletes a package from the server represented by the Source.
+        /// Deletes a package from a Http server
         /// </summary>
         /// <param name="apiKey">API key to be used to delete the package.</param>
         /// <param name="packageId">The package Id.</param>
         /// <param name="packageVersion">The package Id.</param>
+        /// <param name="userAgent">The Http agent</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="token">The cancellation token</param>
         private async Task DeletePackageFromServer(string apiKey,
             string packageId,
             string packageVersion,
@@ -267,9 +273,9 @@ namespace NuGet.Protocol.Core.Types
         /// <summary>
         /// Deletes a package from a FileSystem.
         /// </summary>
-        /// <param name="fileSystem">The FileSystem where the specified package is deleted.</param>
         /// <param name="packageId">The package Id.</param>
         /// <param name="packageVersion">The package Id.</param>
+        /// <param name="logger">The logger</param>
         private void DeletePackageFromFileSystem(string packageId, string packageVersion, ILogger logger)
         {
             string root = _source.LocalPath;
@@ -283,6 +289,10 @@ namespace NuGet.Protocol.Core.Types
             File.Delete(fullPath);
         }
 
+        /// <summary>
+        /// Remove the read-only flag.
+        /// </summary>
+        /// <param name="fullPath">The file path</param>
         private void MakeFileWritable(string fullPath)
         {
             FileAttributes attributes = File.GetAttributes(fullPath);
@@ -312,6 +322,11 @@ namespace NuGet.Protocol.Core.Types
             return requestUri;
         }
 
+        /// <summary>
+        /// Ensure a trailing slash at the end
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         private static Uri EnsureTrailingSlash(string value)
         {
             if (!value.EndsWith("/", StringComparison.OrdinalIgnoreCase))
@@ -321,41 +336,5 @@ namespace NuGet.Protocol.Core.Types
 
             return new Uri(value);
         }
-
-        private bool IsV2StyleRepository(string root)
-        {
-            //ported from https://github.com/NuGet/NuGet2/blob/2.11/
-            // src/Core/Repositories/LazyLocalPackageRepository.cs
-            if (!Directory.Exists(root) ||
-                Directory.GetFiles(root, "*.nupkg").Any())
-            {
-                // If the repository does not exist or if there are .nupkg in the path, this is a v2-style repository.
-                return true;
-            }
-
-            foreach (var idDirectory in Directory.GetDirectories(path: string.Empty))
-            {
-                if (Directory.GetFiles(idDirectory, "*.nupkg").Any() ||
-                    Directory.GetFiles(idDirectory, "*.nuspec").Any())
-                {
-                    // ~/Foo/Foo.1.0.0.nupkg (LocalPackageRepository with PackageSaveModes.Nupkg) or 
-                    // ~/Foo/Foo.1.0.0.nuspec (LocalPackageRepository with PackageSaveMode.Nuspec)
-                    return true;
-                }
-
-                foreach (var versionDirectoryPath in Directory.GetDirectories(idDirectory))
-                {
-                    if (Directory.GetFiles(versionDirectoryPath, idDirectory + ".nuspec").Any())
-                    {
-                        // If we have files in the format {packageId}/{version}/{packageId}.nuspec, 
-                        // assume it's an expanded package repository.
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
     }
 }

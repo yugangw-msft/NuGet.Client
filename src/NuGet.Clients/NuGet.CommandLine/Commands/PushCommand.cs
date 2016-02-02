@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Configuration;
-using NuGet.Protocol.Core;
 using NuGet.Protocol.Core.Types;
 
 namespace NuGet.CommandLine
@@ -38,9 +37,7 @@ namespace NuGet.CommandLine
             // First argument should be the package
             string packagePath = Arguments[0];
 
-            // Don't push symbols by default
             string source = ResolveSource(packagePath, ConfigurationDefaults.Instance.DefaultPushSource);
-
             await GetPushCommandResource(source);
 
             string pushEndpoint = string.Empty;
