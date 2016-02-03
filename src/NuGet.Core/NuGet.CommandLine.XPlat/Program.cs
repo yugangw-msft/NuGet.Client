@@ -31,6 +31,7 @@ namespace NuGet.CommandLine.XPlat
 
         public static ILogger Log { get; set; }
 
+        //TODO: Temporary change to load push command
         public static int Main(string[] args)
         {
 #if DEBUG
@@ -52,6 +53,7 @@ namespace NuGet.CommandLine.XPlat
             app.VersionOption("--version", typeof(Program).GetTypeInfo().Assembly.GetName().Version.ToString());
 
             var verbosity = app.Option(VerbosityOption, Strings.Switch_Verbosity, CommandOptionType.SingleValue);
+            EnsureLog(verbosity);
 
             SetConnectionLimit();
 
@@ -236,6 +238,10 @@ namespace NuGet.CommandLine.XPlat
                     return restoreSummaries.All(x => x.Success) ? 0 : 1;
                 });
             });
+            //TODO: clarify why we need to call multiple times in this file???
+            EnsureLog(verbosity);
+            new PushCommand(app, Log);
+            new DeleteCommand(app, Log);
 
             app.OnExecute(() =>
             {

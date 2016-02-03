@@ -47,7 +47,7 @@ namespace NuGet.CommandLine
                 return;
             }
 
-            NuGet.Commands.PushCommand push = new NuGet.Commands.PushCommand(
+            NuGet.Commands.PushCommandBase push = new NuGet.Commands.PushCommandBase(
                 packagePath,
                 pushCommandResource,
                 GetApiKey(pushEndpoint),

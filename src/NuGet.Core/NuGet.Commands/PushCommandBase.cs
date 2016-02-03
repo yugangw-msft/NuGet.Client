@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Protocol.Core.Types;
 using NuGet.Logging;
@@ -15,7 +12,7 @@ using NuGet.Packaging.Core;
 
 namespace NuGet.Commands
 {
-    public class PushCommand
+    public class PushCommandBase
     {
         private PushCommandResource _pushCommandResource;
         private string _userAgent;
@@ -26,7 +23,7 @@ namespace NuGet.Commands
 
         ILogger _logger;
 
-        public PushCommand(
+        public PushCommandBase(
             string packagePath,
             PushCommandResource pushCommandResource,
             string apiKey,
@@ -75,8 +72,7 @@ namespace NuGet.Commands
             }
             catch (HttpRequestException exception)
             {
-                //inner exception contains more detail, so surface it.
-                //TODO: narrow down the types of inner exception.
+                //inner exception is more accurate, so surface it.
                 if (exception.InnerException != null)
                 {
                     throw exception.InnerException;
@@ -87,33 +83,6 @@ namespace NuGet.Commands
                 }
             }
         }
-
-        //private string ResolveSource(string packagePath, string configurationDefaultPushSource = null)
-        //{
-        //    string source = Source;
-
-        //    if (String.IsNullOrEmpty(source))
-        //    {
-        //        source = SettingsUtility.GetConfigValue(Settings, "DefaultPushSource");
-        //    }
-
-        //    if (String.IsNullOrEmpty(source))
-        //    {
-        //        source = configurationDefaultPushSource;
-        //    }
-
-        //    if (!String.IsNullOrEmpty(source))
-        //    {
-        //        source = SourceProvider.ResolveAndValidateSource(source);
-        //    }
-        //    else
-        //    {
-        //        source = packagePath.EndsWith(PackCommand.SymbolsExtension, StringComparison.OrdinalIgnoreCase)
-        //            ? NuGetConstants.DefaultSymbolServerUrl
-        //            : NuGetConstants.DefaultGalleryServerUrl;
-        //    }
-        //    return source;
-        //}
 
         private async Task PushSymbols(string packagePath, CancellationToken token)
         {
@@ -219,30 +188,6 @@ namespace NuGet.Commands
                 throw new ArgumentException(string.Format(Strings.UnableToFindFile, packagePath));
             }
         }
-
-        //private string GetApiKey(string source)
-        //{
-        //    if (!String.IsNullOrEmpty(ApiKey))
-        //    {
-        //        return ApiKey;
-        //    }
-
-        //    string apiKey = null;
-
-        //    // Second argument, if present, should be the API Key
-        //    if (Arguments.Count > 1)
-        //    {
-        //        apiKey = Arguments[1];
-        //    }
-
-        //    // If the user did not pass an API Key look in the config file
-        //    if (String.IsNullOrEmpty(apiKey))
-        //    {
-        //        apiKey = SettingsUtility.GetDecryptedValue(Settings, "apikeys", source);
-        //    }
-
-        //    return apiKey;
-        //}
 
         /// <summary>
         /// Indicates whether the specified source is a file source, such as: \\a\b, c:\temp, etc.
