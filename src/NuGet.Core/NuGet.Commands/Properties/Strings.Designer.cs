@@ -498,6 +498,59 @@ namespace NuGet.Commands
             return string.Format(CultureInfo.CurrentCulture, GetString("Error_UnknownBuildAction"), p0, p1, p2);
         }
 
+        /// <summary>
+        ///    Looks up a localized string similar to This version of nuget.exe does not support pushing packages to package source &apos;{0}&apos;..
+        /// </summary>
+        internal static string PushCommand_PushNotSupported {
+            get {
+                return GetString("PushCommand_PushNotSupported");
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Your package was pushed..
+        /// </summary>
+        internal static string PushCommandPackagePushed {
+            get {
+                return GetString("PushCommandPackagePushed");
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Pushing {0} to {1}....
+        /// </summary>
+        internal static string PushCommandPushingPackage {
+            get {
+                return GetString("PushCommandPushingPackage");
+            }
+        }
+        
+      
+        /// <summary>
+        ///    Looks up a localized string similar to File does not exist ({0})..
+        /// </summary>
+        internal static string UnableToFindFile {
+            get {
+                return GetString("UnableToFindFile");
+            }
+        }
+        
+        internal static string NoApiKeyFound {
+            get {
+                return GetString("NoApiKeyFound");
+            }
+        }
+        
+
+        /// <summary>
+        ///    Looks up a localized string similar to Found symbols package &apos;{0}&apos;, but no API key was specified for the symbol server. To save an API Key, run &apos;NuGet.exe setApiKey [your API key from http://www.NuGet.org]&apos;..
+        /// </summary>
+        internal static string Warning_SymbolServerNotConfigured {
+            get {
+                return GetString("Warning_SymbolServerNotConfigured");
+            }
+        }
+
         private static string GetString(string name, params string[] formatterNames)
         {
             var value = _resourceManager.GetString(name);
