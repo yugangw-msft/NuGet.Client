@@ -4,6 +4,7 @@
     {
         public static readonly string NupkgExtension = ".nupkg";
         public static readonly string NuspecExtension = ".nuspec";
+        public static readonly string SymbolsExtension = ".symbols" + NupkgExtension;
 
         /// <summary>
         /// _._ denotes an empty folder since OPC does not allow an
