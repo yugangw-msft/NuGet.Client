@@ -50,6 +50,8 @@ namespace NuGet.Protocol
                 ? new SemaphoreSlim(ConcurrencyLimit, ConcurrencyLimit)
                 : null;
 
+        public Func<HttpRequestMessage, HttpRequestMessage> NewRequest { get; set; }
+
         public HttpSource(PackageSource source, Func<Task<HttpHandlerResource>> messageHandlerFactory)
         {
             if (source == null)
@@ -277,7 +279,7 @@ namespace NuGet.Protocol
 
                         // Give up after 3 tries.
                         _authRetries++;
-                        if (_authRetries >= HttpHandlerResourceV3Provider.MaxAuthRetries)
+                        if (_authRetries > HttpHandlerResourceV3Provider.MaxAuthRetries)
                         {
                             return response;
                         }
@@ -361,17 +363,21 @@ namespace NuGet.Protocol
 
         private async Task UpdateHttpClient(ICredentials credentials)
         {
-            if (_httpHandler == null)
-            {
-                _httpHandler = await _messageHandlerFactory();
-                _httpClient = new HttpClient(_httpHandler.MessageHandler);
+            // Once an http handler has been used for requests the credentials may not be changed.
+            // Since another caller may still be holding an active response stream open
+            // it is not possible to safely dispose of the existing client when creating a new one.
 
-                // Set user agent
-                UserAgent.SetUserAgent(_httpClient);
-            }
+            var httpHandler = await _messageHandlerFactory();
+            httpHandler.ClientHandler.Credentials = credentials;
+            httpHandler.ClientHandler.UseDefaultCredentials = (credentials == null);
 
-            _httpHandler.ClientHandler.Credentials = credentials;
-            _httpHandler.ClientHandler.UseDefaultCredentials = (credentials == null);
+            var httpClient = new HttpClient(httpHandler.MessageHandler);
+
+            // Set user agent
+            UserAgent.SetUserAgent(httpClient);
+
+            _httpHandler = httpHandler;
+            _httpClient = httpClient;
 
             // Mark that auth has been updated
             _lastAuthId = Guid.NewGuid();
@@ -561,13 +567,21 @@ namespace NuGet.Protocol
         /// <summary>
         /// Clones an <see cref="HttpRequestMessage" /> request.
         /// </summary>
-        public static HttpRequestMessage CloneRequest(HttpRequestMessage request)
+        public HttpRequestMessage CloneRequest(HttpRequestMessage request)
         {
-            var clone = new HttpRequestMessage(request.Method, request.RequestUri)
+            HttpRequestMessage clone = null;
+            if (this.NewRequest != null)
             {
-                Content = request.Content,
-                Version = request.Version
-            };
+                clone = NewRequest(request);
+            }
+            else
+            {
+                clone = new HttpRequestMessage(request.Method, request.RequestUri)
+                {
+                    Content = request.Content,
+                    Version = request.Version
+                };
+            }
 
             foreach (var header in request.Headers)
             {
@@ -580,6 +594,7 @@ namespace NuGet.Protocol
             }
 
             return clone;
+
         }
 
         public void Dispose()

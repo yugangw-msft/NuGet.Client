@@ -24,7 +24,10 @@ namespace NuGet.Protocol.Core.Types
             HttpSource httpSource)
         {
             PushEndpoint = pushEndpoint;
-            _source = new Uri(pushEndpoint);
+            if (!string.IsNullOrEmpty(pushEndpoint))
+            {
+                _source = new Uri(pushEndpoint);
+            }
             _httpSource = httpSource;
         }
 
@@ -70,25 +73,45 @@ namespace NuGet.Protocol.Core.Types
             ILogger logger,
             CancellationToken token)
         {
-            using (var fileStream = new FileStream(pathToPackage, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var request = new HttpRequestMessage(HttpMethod.Put, GetServiceEndpointUrl(string.Empty)))
+            FileStream fileStream;
+            HttpRequestMessage request;
+            MultipartFormDataContent content;
+            StreamContent packageContent;
+            CreateNewRequest(apiKey, pathToPackage, out fileStream, out request, out content, out packageContent);
+
+            _httpSource.NewRequest = (r) =>
             {
-                if (!string.IsNullOrEmpty(apiKey))
-                {
-                    request.Headers.Add(ApiKeyHeader, apiKey);
-                }
+                packageContent.Dispose();
+                content.Dispose();
+                request.Dispose();
+                fileStream.Dispose();
+                CreateNewRequest(apiKey, pathToPackage, out fileStream, out request, out content, out packageContent);
+                return request;
+            };
+            var response = await _httpSource.SendAsync(request, logger, token);
 
-                using (var content = new MultipartFormDataContent())
-                using (var packageContent = new StreamContent(fileStream))
-                {
-                    packageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
-                    content.Add(packageContent, "package", "package.nupkg");
-                    request.Content = content;
+            packageContent.Dispose();
+            content.Dispose();
+            request.Dispose();
+            fileStream.Dispose();
 
-                    var response = await _httpSource.SendAsync(request, logger, token);
-                    response.EnsureSuccessStatusCode();
-                }
+            response.EnsureSuccessStatusCode();
+        }
+
+        private void CreateNewRequest(string apiKey, string pathToPackage, out FileStream fileStream, out HttpRequestMessage request, out MultipartFormDataContent content, out StreamContent packageContent)
+        {
+            fileStream = new FileStream(pathToPackage, FileMode.Open, FileAccess.Read, FileShare.Read);
+            request = new HttpRequestMessage(HttpMethod.Put, GetServiceEndpointUrl(string.Empty));
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                request.Headers.Add(ApiKeyHeader, apiKey);
             }
+
+            content = new MultipartFormDataContent();
+            packageContent = new StreamContent(fileStream);
+            packageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
+            content.Add(packageContent, "package", "package.nupkg");
+            request.Content = content;
         }
 
         /// <summary>
