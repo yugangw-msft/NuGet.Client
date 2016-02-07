@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using NuGet.Protocol.Core.Types;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NuGet.CommandLine

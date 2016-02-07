@@ -272,7 +272,7 @@ namespace NuGet.Protocol.Core.Types
         {
             if (_source.IsFile)
             {
-                PushPackageToFileSystem(pathToPackage);
+                await PushPackageToFileSystem(pathToPackage, logger, token);
             }
             else
             {
@@ -345,18 +345,26 @@ namespace NuGet.Protocol.Core.Types
         /// Pushes a package to a FileSystem.
         /// </summary>
         /// <param name="pathToPackage">The path of package to be pushed.</param>
-        private void PushPackageToFileSystem(string pathToPackage)
+        private async Task PushPackageToFileSystem(string pathToPackage, ILogger logger, CancellationToken token)
         {
             string root = _source.LocalPath;
             PackageArchiveReader reader = new PackageArchiveReader(pathToPackage);
             PackageIdentity packageIdentity = reader.GetIdentity();
 
-            //TODD: support V3 repo style if detect it is
-            var pathResolver = new PackagePathResolver(root, useSideBySidePaths: true);
-            var packageFileName = pathResolver.GetPackageFileName(packageIdentity);
+            if (IsV2LocalRepository(root))
+            {
+                var pathResolver = new PackagePathResolver(root, useSideBySidePaths: true);
+                var packageFileName = pathResolver.GetPackageFileName(packageIdentity);
 
-            string fullPath = Path.Combine(root, packageFileName);
-            File.Copy(pathToPackage, fullPath, true);
+                string fullPath = Path.Combine(root, packageFileName);
+                File.Copy(pathToPackage, fullPath, true);
+            } 
+            else
+            {
+                var context = new OfflineFeedAddContext(pathToPackage, root, logger, true, false, false, true);
+                await OfflineFeedUtility.AddPackageToSource(context, token);
+            }
+
         }
 
         /// <summary>
@@ -423,11 +431,28 @@ namespace NuGet.Protocol.Core.Types
             var resolver = new PackagePathResolver(_source.AbsolutePath, useSideBySidePaths: true);
             resolver.GetPackageFileName(new Packaging.Core.PackageIdentity(packageId, new NuGetVersion(packageVersion)));
             var packageIdentity = new PackageIdentity(packageId, new NuGetVersion(packageVersion));
-            var packageFileName = resolver.GetPackageFileName(packageIdentity);
 
-            var fullPath = Path.Combine(root, packageFileName);
-            MakeFileWritable(fullPath);
-            File.Delete(fullPath);
+            if (IsV2LocalRepository(root))
+            {
+                var packageFileName = resolver.GetPackageFileName(packageIdentity);
+                var nupkgFilePath = Path.Combine(root, packageFileName);
+                if (!File.Exists(nupkgFilePath))
+                {
+                    throw new ArgumentException(Strings.DeletePackage_NotFound);
+                }
+                MakeFileWritable(nupkgFilePath);
+                File.Delete(nupkgFilePath);
+            }
+            else
+            {
+                string packageDirectory = OfflineFeedUtility.GetPackageDirectory(packageIdentity, root);
+                if (!Directory.Exists(packageDirectory))
+                {
+                    throw new ArgumentException(Strings.DeletePackage_NotFound);
+                }
+                //TODO: ask nuget team for the right approach to delete folder, if we have
+                Directory.Delete(packageDirectory, true);
+            }
         }
 
         /// <summary>
@@ -655,6 +680,38 @@ namespace NuGet.Protocol.Core.Types
                 _path = path;
                 _isFile = isFile;
             }
+        }
+
+        private bool IsV2LocalRepository(string root)
+        {
+            if (!Directory.Exists(root) ||
+                Directory.GetFiles(root, "*.nupkg").Any())
+            {
+                // If the repository does not exist or if there are .nupkg in the path, this is a v2-style repository.
+                return true;
+            }
+
+            foreach (var idDirectory in Directory.GetDirectories(root))
+            {
+                if (Directory.GetFiles(idDirectory, "*.nupkg").Any() ||
+                    Directory.GetFiles(idDirectory, "*.nuspec").Any())
+                {
+                    // ~/Foo/Foo.1.0.0.nupkg (LocalPackageRepository with PackageSaveModes.Nupkg) or 
+                    // ~/Foo/Foo.1.0.0.nuspec (LocalPackageRepository with PackageSaveMode.Nuspec)
+                    return true;
+                }
+                var idDirectoryName = Path.GetFileName(idDirectory);
+                foreach (var versionDirectoryPath in Directory.GetDirectories(idDirectory))
+                {
+                    if (Directory.GetFiles(versionDirectoryPath, idDirectoryName + NuGetConstants.ManifestExtension).Any())
+                    {
+                        // If we have files in the format {packageId}/{version}/{packageId}.nuspec, assume it's an expanded package repository.
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }

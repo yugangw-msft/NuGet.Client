@@ -1,8 +1,9 @@
-﻿using System.IO;
+﻿using NuGet.Protocol.Core.Types;
 using Xunit;
 
 namespace NuGet.CommandLine.Test
 {
+    //TODO: move to "test/NuGet.Core/NuGet.Protocol.Core.v3" 
     public class OffineFeedUtilityTests
     {
         [Theory]

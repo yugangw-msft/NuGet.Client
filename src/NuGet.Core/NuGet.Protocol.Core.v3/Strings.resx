@@ -126,8 +126,20 @@
   <data name="ActionResolver_UnsupportedDependencyBehavior" xml:space="preserve">
     <value>Unsupported Dependency Behavior '{0}'.</value>
   </data>
+  <data name="AddCommand_ExistingPackageInvalid" xml:space="preserve">
+    <value>Package '{0}' already exists at feed '{1}' and is invalid.</value>
+  </data>
+  <data name="AddCommand_PackageAlreadyExists" xml:space="preserve">
+    <value>Package '{0}' already exists at feed '{1}'.</value>
+  </data>
+  <data name="AddCommand_SuccessfullyAdded" xml:space="preserve">
+    <value>Successfully added package '{0}' to feed '{1}'.</value>
+  </data>
   <data name="ArgumentCannotBeNullOrEmpty" xml:space="preserve">
     <value>Argument cannot be null or empty.</value>
+  </data>
+  <data name="Argument_Cannot_Be_Null_Or_Empty" xml:space="preserve">
+    <value>Argument can not be null or empty.</value>
   </data>
   <data name="DefaultSymbolServer" xml:space="preserve">
     <value>the symbol server</value>
@@ -143,6 +155,9 @@
   </data>
   <data name="DeleteCommandDeletingPackage" xml:space="preserve">
     <value>Deleting {0} {1} from the {2}.</value>
+  </data>
+  <data name="DeletePackage_NotFound" xml:space="preserve">
+    <value>Not Found.</value>
   </data>
   <data name="DownloadActionHandler_InvalidDownloadUrl" xml:space="preserve">
     <value>The download URL for {0} '{1}' is invalid.</value>
@@ -189,11 +204,20 @@
   <data name="NuGetServiceProvider_ServiceNotSupported" xml:space="preserve">
     <value>The {0} service is not supported by this object.</value>
   </data>
+  <data name="NupkgPath_InvalidNupkg" xml:space="preserve">
+    <value>'{0}' is not a valid nupkg file.</value>
+  </data>
   <data name="OneOrMoreUrisMustBeSpecified" xml:space="preserve">
     <value>One or more URIs must be specified.</value>
   </data>
   <data name="PackageActionDescriptionWrapper_UnrecognizedAction" xml:space="preserve">
     <value>Unrecognized Package Action '{0}'.</value>
+  </data>
+  <data name="Path_Invalid" xml:space="preserve">
+    <value>'{0}' is not a valid path.</value>
+  </data>
+  <data name="Path_Invalid_NotFileNotUnc" xml:space="preserve">
+    <value>'{0}' should be a local path or a UNC share path.</value>
   </data>
   <data name="ProjectInstallationTarget_ProjectIsNotTargetted" xml:space="preserve">
     <value>The project '{0}' is not one of the projects targetted by this object.</value>
