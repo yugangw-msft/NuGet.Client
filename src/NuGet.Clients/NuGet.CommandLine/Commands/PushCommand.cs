@@ -40,45 +40,13 @@ namespace NuGet.CommandLine
             string source = ResolveSource(packagePath, ConfigurationDefaults.Instance.DefaultPushSource);
             await GetPushCommandResource(source);
 
-            string pushEndpoint = string.Empty;
-            if (_pushCommandResource != null)
-            {
-                pushEndpoint = _pushCommandResource.PushEndpoint;
-            }
-            if (string.IsNullOrEmpty(pushEndpoint))
-            {
-                var message = string.Format(
-                    LocalizedResourceManager.GetString("PushCommand_PushNotSupported"),
-                    source);
-
-                Console.LogWarning(message);
-                return;
-            }
-
-            var apiKey = GetApiKey(pushEndpoint);
-            if (string.IsNullOrEmpty(apiKey) && !IsFileSource(pushEndpoint))
-            {
-                Console.WriteWarning(
-                    LocalizedResourceManager.GetString("NoApiKeyFound"),
-                    CommandLineUtility.GetSourceDisplayName(pushEndpoint));
-            }
-
-            var timeout = TimeSpan.FromSeconds(Math.Abs(Timeout));
-            if (timeout.TotalSeconds == 0)
-            {
-                timeout = TimeSpan.FromMinutes(5); // Default to 5 minutes
-            }
-            var tokenSource = new CancellationTokenSource();
-            tokenSource.CancelAfter(timeout);
-
             try
             {
-                await PushPackage(packagePath, pushEndpoint, apiKey, tokenSource.Token);
-
-                if (pushEndpoint.Equals(NuGetConstants.DefaultGalleryServerUrl, StringComparison.OrdinalIgnoreCase))
-                {
-                    await PushSymbols(packagePath, tokenSource.Token);
-                }
+                await _pushCommandResource.Push(packagePath,
+                    source, 
+                    Timeout, 
+                    endpoint => { return GetApiKey(endpoint); }, 
+                    Console);
             }
             catch (Exception ex)
             {
@@ -131,112 +99,6 @@ namespace NuGet.CommandLine
             return source;
         }
 
-        private async Task PushSymbols(string packagePath, CancellationToken token)
-        {
-            // Get the symbol package for this package
-            string symbolPackagePath = GetSymbolsPath(packagePath);
-
-            // Push the symbols package if it exists
-            if (File.Exists(symbolPackagePath))
-            {
-                string source = NuGetConstants.DefaultSymbolServerUrl;
-
-                // See if the api key exists
-                string apiKey = GetApiKey(source);
-
-                if (String.IsNullOrEmpty(apiKey))
-                {
-                    Console.WriteWarning(
-                        LocalizedResourceManager.GetString("Warning_SymbolServerNotConfigured"),
-                        Path.GetFileName(symbolPackagePath),
-                        LocalizedResourceManager.GetString("DefaultSymbolServer"));
-                }
-
-                await PushPackage(symbolPackagePath, source, apiKey, token);
-            }
-        }
-
-        /// <summary>
-        /// Get the symbols package from the original package. Removes the .nupkg and adds .symbols.nupkg
-        /// </summary>
-        private static string GetSymbolsPath(string packagePath)
-        {
-            string symbolPath = Path.GetFileNameWithoutExtension(packagePath) + PackCommand.SymbolsExtension;
-            string packageDir = Path.GetDirectoryName(packagePath);
-            return Path.Combine(packageDir, symbolPath);
-        }
-
-        private async Task PushPackage(string packagePath, string source, string apiKey, CancellationToken token)
-        {
-            IEnumerable<string> packagesToPush = GetPackagesToPush(packagePath);
-
-            EnsurePackageFileExists(packagePath, packagesToPush);
-
-            foreach (string packageToPush in packagesToPush)
-            {
-                await PushPackageCore(source, apiKey, packageToPush, token);
-            }
-        }
-
-        private async Task PushPackageCore(string source,
-            string apiKey,
-            string packageToPush,
-            CancellationToken token)
-        {
-            // Push the package to the server
-            var sourceUri = new Uri(source);
-            string sourceName = CommandLineUtility.GetSourceDisplayName(source);
-            Console.WriteLine(LocalizedResourceManager.GetString("PushCommandPushingPackage"),
-                Path.GetFileName(packageToPush), sourceName);
-
-            await _pushCommandResource.PushPackage(
-                apiKey,
-                packageToPush,
-                new FileInfo(packageToPush).Length,
-                Console, 
-                token);
-
-            Console.WriteLine(LocalizedResourceManager.GetString("PushCommandPackagePushed"));
-        }
-
-        private static IEnumerable<string> GetPackagesToPush(string packagePath)
-        {
-            // Ensure packagePath ends with *.nupkg
-            packagePath = EnsurePackageExtension(packagePath);
-            return PathResolver.PerformWildcardSearch(Environment.CurrentDirectory, packagePath);
-        }
-
-        internal static string EnsurePackageExtension(string packagePath)
-        {
-            if (packagePath.IndexOf('*') == -1)
-            {
-                // If there's no wildcard in the path to begin with, assume that it's an absolute path.
-                return packagePath;
-            }
-            // If the path does not contain wildcards, we need to add *.nupkg to it.
-            if (!packagePath.EndsWith(Constants.PackageExtension, StringComparison.OrdinalIgnoreCase))
-            {
-                if (packagePath.EndsWith("**", StringComparison.OrdinalIgnoreCase))
-                {
-                    packagePath = packagePath + Path.DirectorySeparatorChar + '*';
-                }
-                else if (!packagePath.EndsWith("*", StringComparison.OrdinalIgnoreCase))
-                {
-                    packagePath = packagePath + '*';
-                }
-                packagePath = packagePath + Constants.PackageExtension;
-            }
-            return packagePath;
-        }
-
-        private static void EnsurePackageFileExists(string packagePath, IEnumerable<string> packagesToPush)
-        {
-            if (!packagesToPush.Any())
-            {
-                throw new CommandLineException(String.Format(CultureInfo.CurrentCulture, LocalizedResourceManager.GetString("UnableToFindFile"), packagePath));
-            }
-        }
-
         private string GetApiKey(string source)
         {
             if (!String.IsNullOrEmpty(ApiKey))
@@ -259,24 +121,6 @@ namespace NuGet.CommandLine
             }
 
             return apiKey;
-        }
-
-        /// <summary>
-        /// Indicates whether the specified source is a file source, such as: \\a\b, c:\temp, etc.
-        /// </summary>
-        /// <param name="source">The source to test.</param>
-        /// <returns>true if the source is a file source; otherwise, false.</returns>
-        private static bool IsFileSource(string source)
-        {
-            Uri uri;
-            if (Uri.TryCreate(source, UriKind.RelativeOrAbsolute, out uri))
-            {
-                return uri.IsFile;
-            }
-            else
-            {
-                return false;
-            }
         }
     }
 }

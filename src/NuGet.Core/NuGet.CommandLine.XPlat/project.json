@@ -36,5 +36,10 @@
         "System.Console": "4.0.0-beta-23409"
       }
     }
+  },
+  "runtimes": {
+    "osx.10.10-x64": { },
+    "ubuntu.14.04-x64": { },
+    "win7-x64": { }
   }
 }

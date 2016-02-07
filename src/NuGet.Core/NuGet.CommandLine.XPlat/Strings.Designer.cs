@@ -150,6 +150,33 @@ namespace NuGet.CommandLine.XPlat {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to Specify the path to the package and your API key to push the package to the server..
+        /// </summary>
+        internal static string Push_Package_ApiKey_Description {
+            get {
+                return ResourceManager.GetString("Push_Package_ApiKey_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Specifies the server URL.
+        /// </summary>
+        internal static string Push_Source_Description {
+            get {
+                return ResourceManager.GetString("Push_Source_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Specifies the timeout for pushing to a server in seconds. Defaults to 300 seconds (5 minutes)..
+        /// </summary>
+        internal static string Push_Timeout_Description {
+            get {
+                return ResourceManager.GetString("Push_Timeout_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to List of projects and project folders to restore. Each value can be: a path to a project.json or global.json file, or a folder to recursively search for project.json files..
         /// </summary>
         internal static string Restore_Arg_ProjectName_Description {

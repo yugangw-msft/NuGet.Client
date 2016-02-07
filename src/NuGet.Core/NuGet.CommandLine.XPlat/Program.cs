@@ -233,6 +233,11 @@ namespace NuGet.CommandLine.XPlat
                 }));
             }));
 
+            //TODO: clarify why we need to call multiple times in this file???
+            EnsureLog(verbosity);
+            new PushCommand(app, Log);
+            new DeleteCommand(app, Log);
+
             app.OnExecute(() =>
             {
                 app.ShowHelp();
@@ -267,7 +272,7 @@ namespace NuGet.CommandLine.XPlat
             return exitCode;
         }
 		
-        private static void SetUserAgent()
+        public static void SetUserAgent()
         {
             UserAgent.UserAgentString
                 = UserAgent.CreateUserAgentString(
