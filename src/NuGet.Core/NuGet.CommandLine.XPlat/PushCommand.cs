@@ -22,7 +22,7 @@ namespace NuGet.CommandLine.XPlat
 
                 var source = push.Option(
                     "-s|--source <source>",
-                    Strings.Push_Source_Description,
+                    Strings.Source_Description,
                     CommandOptionType.SingleValue);
 
                 var timeout = push.Option(

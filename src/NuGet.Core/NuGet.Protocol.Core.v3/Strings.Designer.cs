@@ -105,6 +105,42 @@ namespace NuGet.Protocol.Core.v3 {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to Delete canceled.
+        /// </summary>
+        internal static string DeleteCommandCanceled {
+            get {
+                return ResourceManager.GetString("DeleteCommandCanceled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to {0} {1} will be deleted from the {2}. Would you like to continue?.
+        /// </summary>
+        internal static string DeleteCommandConfirm {
+            get {
+                return ResourceManager.GetString("DeleteCommandConfirm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to {0} {1} was deleted successfully..
+        /// </summary>
+        internal static string DeleteCommandDeletedPackage {
+            get {
+                return ResourceManager.GetString("DeleteCommandDeletedPackage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Deleting {0} {1} from the {2}..
+        /// </summary>
+        internal static string DeleteCommandDeletingPackage {
+            get {
+                return ResourceManager.GetString("DeleteCommandDeletingPackage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to The download URL for {0} &apos;{1}&apos; is invalid..
         /// </summary>
         internal static string DownloadActionHandler_InvalidDownloadUrl {

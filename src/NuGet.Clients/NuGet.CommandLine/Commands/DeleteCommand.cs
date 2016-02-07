@@ -42,30 +42,14 @@ namespace NuGet.CommandLine
             var packageSource = new Configuration.PackageSource(source);
             var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
             var sourceRepository = sourceRepositoryProvider.CreateRepository(packageSource);
-
-            //TODO: Consider a better resource name, like PackageUpdaterResource
-            //Do it after the common hander resource is available, to avoid throw away code.
             PushCommandResource pushCommandResource = await sourceRepository.GetResourceAsync<PushCommandResource>();
 
-            //If the user did not pass an API Key look in the config file
-            string apiKey = GetApiKey(source);
-            string sourceDisplayName = CommandLineUtility.GetSourceDisplayName(source);
-            if (String.IsNullOrEmpty(apiKey))
-            {
-                Console.WriteWarning(LocalizedResourceManager.GetString("NoApiKeyFound"), sourceDisplayName);
-            }
-
-            if (NonInteractive || Console.Confirm(String.Format(CultureInfo.CurrentCulture, LocalizedResourceManager.GetString("DeleteCommandConfirm"), packageId, packageVersion, sourceDisplayName)))
-            {
-                Console.WriteLine(LocalizedResourceManager.GetString("DeleteCommandDeletingPackage"), packageId, packageVersion, sourceDisplayName);
-                //TODO: confirm, no timeout on delete command?
-                await pushCommandResource.DeletePackage(apiKey, packageId, packageVersion, Console, CancellationToken.None);
-                Console.WriteLine(LocalizedResourceManager.GetString("DeleteCommandDeletedPackage"), packageId, packageVersion);
-            }
-            else
-            {
-                Console.WriteLine(LocalizedResourceManager.GetString("DeleteCommandCanceled"));
-            }
+            await pushCommandResource.Delete(packageId, 
+                packageVersion,
+                source,
+                (s) => GetApiKey(s),
+                desc => Console.Confirm(desc),
+                Console);
         }
 
         internal string GetApiKey(string source)

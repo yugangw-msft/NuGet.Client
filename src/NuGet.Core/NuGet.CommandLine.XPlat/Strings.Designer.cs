@@ -69,6 +69,51 @@ namespace NuGet.CommandLine.XPlat {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to {0} (y/N) .
+        /// </summary>
+        internal static string ConsoleConfirmMessage {
+            get {
+                return ResourceManager.GetString("ConsoleConfirmMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to y.
+        /// </summary>
+        internal static string ConsoleConfirmMessageAccept {
+            get {
+                return ResourceManager.GetString("ConsoleConfirmMessageAccept", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to .
+        /// </summary>
+        internal static string Delete {
+            get {
+                return ResourceManager.GetString("Delete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Deletes a package from the server..
+        /// </summary>
+        internal static string Delete_Description {
+            get {
+                return ResourceManager.GetString("Delete_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to The Package Id and version..
+        /// </summary>
+        internal static string Delete_PackageIdAndVersion_Description {
+            get {
+                return ResourceManager.GetString("Delete_PackageIdAndVersion_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to Committing restore....
         /// </summary>
         internal static string Log_Committing {
@@ -150,20 +195,38 @@ namespace NuGet.CommandLine.XPlat {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to No API Key was provided and no API Key could be found for {0}. To save an API Key for a source use the &apos;setApiKey&apos; command..
+        /// </summary>
+        internal static string NoApiKeyFound {
+            get {
+                return ResourceManager.GetString("NoApiKeyFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Do not prompt for user input or confirmations..
+        /// </summary>
+        internal static string NonInteractive_Description {
+            get {
+                return ResourceManager.GetString("NonInteractive_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Pushes a package to the server and publishes it..
+        /// </summary>
+        internal static string Push_Description {
+            get {
+                return ResourceManager.GetString("Push_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to Specify the path to the package and your API key to push the package to the server..
         /// </summary>
         internal static string Push_Package_ApiKey_Description {
             get {
                 return ResourceManager.GetString("Push_Package_ApiKey_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///    Looks up a localized string similar to Specifies the server URL.
-        /// </summary>
-        internal static string Push_Source_Description {
-            get {
-                return ResourceManager.GetString("Push_Source_Description", resourceCulture);
             }
         }
         
@@ -245,6 +308,15 @@ namespace NuGet.CommandLine.XPlat {
         internal static string Restore_Switch_Source_Description {
             get {
                 return ResourceManager.GetString("Restore_Switch_Source_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to Specifies the server URL.
+        /// </summary>
+        internal static string Source_Description {
+            get {
+                return ResourceManager.GetString("Source_Description", resourceCulture);
             }
         }
         

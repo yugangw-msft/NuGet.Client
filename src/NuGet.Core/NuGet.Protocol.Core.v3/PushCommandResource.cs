@@ -72,6 +72,42 @@ namespace NuGet.Protocol.Core.Types
             }
         }
 
+        public async Task Delete(string packageId,
+            string packageVersion,
+            string source,
+            Func<string, string> getApiKey,
+            Func<string, bool> confirm, 
+            ILogger log)
+        {
+            string sourceDisplayName = GetSourceDisplayName(source);
+            string apiKey = getApiKey(source);
+            if (String.IsNullOrEmpty(apiKey))
+            {
+                log.LogWarning(string.Format(CultureInfo.CurrentCulture,
+                    Strings.NoApiKeyFound, 
+                    sourceDisplayName));
+            }
+
+            if (confirm(string.Format(CultureInfo.CurrentCulture, Strings.DeleteCommandConfirm, packageId, packageVersion, sourceDisplayName)))
+            {
+                log.LogWarning(string.Format(
+                    Strings.DeleteCommandDeletingPackage,
+                    packageId,
+                    packageVersion,
+                    sourceDisplayName
+                    ));
+                await DeletePackage(apiKey, packageId, packageVersion, log, CancellationToken.None);
+                log.LogInformation(string.Format(CultureInfo.CurrentCulture,
+                    Strings.DeleteCommandDeletedPackage, 
+                    packageId, 
+                    packageVersion));
+            }
+            else
+            {
+                log.LogInformation(Strings.DeleteCommandCanceled);
+            }
+        }
+
         private async Task PushSymbols(string packagePath, string apiKey, ILogger log, CancellationToken token)
         {
             // Get the symbol package for this package
@@ -331,7 +367,7 @@ namespace NuGet.Protocol.Core.Types
         /// <param name="packageVersion">The package version.</param>
         /// <param name="logger">The logger</param>
         /// <param name="token">The cancellation token</param>
-        public async Task DeletePackage(string apiKey,
+        private async Task DeletePackage(string apiKey,
             string packageId,
             string packageVersion,
             ILogger logger,

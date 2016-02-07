@@ -21,8 +21,6 @@ namespace NuGet.CommandLine.XPlat
             new PackageSourceProvider(
                 Settings.LoadDefaultSettings(root: null, configFileName: null, machineWideSettings: null)));
 
-        protected bool IsNonInteractive { get; set; }
-
         protected static async Task<PushCommandResource> GetPushCommandResource(
              CommandOption source,
              ISettings settings)
@@ -55,9 +53,9 @@ namespace NuGet.CommandLine.XPlat
             }
         }
 
-        protected bool Confirm(string description)
+        public bool Confirm(bool isNonInteractive, string description)
         {
-            if (IsNonInteractive)
+            if (isNonInteractive)
             {
                 return true;
             }
@@ -67,11 +65,9 @@ namespace NuGet.CommandLine.XPlat
             {
                 currentColor = System.Console.ForegroundColor;
                 System.Console.ForegroundColor = ConsoleColor.Yellow;
-                /*LocalizedResourceManager.GetString("ConsoleConfirmMessage")*/
-                System.Console.Write(String.Format(CultureInfo.CurrentCulture, "{0} (y/N)", description));
+                System.Console.Write(String.Format(CultureInfo.CurrentCulture, Strings.ConsoleConfirmMessage, description));
                 var result = System.Console.ReadLine();
-                /*LocalizedResourceManager.GetString("ConsoleConfirmMessageAccept")*/
-                return result.StartsWith("y", StringComparison.OrdinalIgnoreCase);
+                return result.StartsWith(Strings.ConsoleConfirmMessageAccept, StringComparison.OrdinalIgnoreCase);
             }
             finally
             {

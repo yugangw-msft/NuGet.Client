@@ -19,28 +19,23 @@ namespace NuGet.CommandLine.XPlat
         {
             app.Command("delete", delete =>
             {
-                //TODO: use resource strings and match the nuegt command lines
-                delete.Description = "Delete a package";
+                delete.Description = Strings.Delete_Description;
 
                 var source = delete.Option(
                     "-s|--source <source>",
-                    "source",
+                    Strings.Source_Description,
                     CommandOptionType.SingleValue);
 
-                var apiKey = delete.Option(
-                    "--apikey <apikey>",
-                    "api key",
-                    CommandOptionType.SingleValue
-                    );
-
+                //TODO: communicate to Nuget team, this should go to a top level argument, and
+                //should not be handled by individual cmdlet
                 var nonInteractive = delete.Option(
                     "--non-interactive <nonInteractive>",
-                    "non interactive",
+                    Strings.NonInteractive_Description,
                     CommandOptionType.NoValue);
 
                 var argRoot = delete.Argument(
                     "[root]",
-                    "package id and version",
+                    Strings.Delete_PackageIdAndVersion_Description,
                     multipleValues: true);
 
                 delete.OnExecute(async () =>
@@ -51,19 +46,14 @@ namespace NuGet.CommandLine.XPlat
                     PushCommandResource pushCommandResource = await GetPushCommandResource(source, setting);
 
                     var packageId = argRoot.Values[0];
-                    //TODO: whataboue delete a package w/o a version
                     var packageVersion = argRoot.Values.Count > 1 ? argRoot.Values[1] : string.Empty;
-                    var message = "{0} {1} will be deleted from the {2}. Would you like to continue?";
-                    if (Confirm(string.Format(message, packageId, packageVersion, pushCommandResource.PushEndpoint)))
-                    {
-                        await pushCommandResource.DeletePackage(apiKey.Value(),
-                           packageId,
-                           packageVersion,
-                           logger,
-                           CancellationToken.None);
-                    }
-                    //TODO, extract apikey
-
+                    var apiKey = argRoot.Values.Count > 2 ? argRoot.Values[2] : string.Empty;
+                    await pushCommandResource.Delete(packageId,
+                        packageVersion,
+                        source.Value(),
+                        s => { return apiKey; },
+                        (desc) => { return Confirm(nonInteractive.HasValue(), desc); },
+                        logger);
                     return 0;
                 });
             });

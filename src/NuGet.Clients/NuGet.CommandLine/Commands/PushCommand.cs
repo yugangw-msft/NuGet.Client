@@ -44,8 +44,8 @@ namespace NuGet.CommandLine
             {
                 await _pushCommandResource.Push(packagePath,
                     source, 
-                    Timeout, 
-                    endpoint => { return GetApiKey(endpoint); }, 
+                    Timeout,
+                    endpoint => { return GetApiKey(endpoint); },
                     Console);
             }
             catch (Exception ex)

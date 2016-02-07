@@ -132,6 +132,18 @@
   <data name="DefaultSymbolServer" xml:space="preserve">
     <value>the symbol server</value>
   </data>
+  <data name="DeleteCommandCanceled" xml:space="preserve">
+    <value>Delete canceled</value>
+  </data>
+  <data name="DeleteCommandConfirm" xml:space="preserve">
+    <value>{0} {1} will be deleted from the {2}. Would you like to continue?</value>
+  </data>
+  <data name="DeleteCommandDeletedPackage" xml:space="preserve">
+    <value>{0} {1} was deleted successfully.</value>
+  </data>
+  <data name="DeleteCommandDeletingPackage" xml:space="preserve">
+    <value>Deleting {0} {1} from the {2}.</value>
+  </data>
   <data name="DownloadActionHandler_InvalidDownloadUrl" xml:space="preserve">
     <value>The download URL for {0} '{1}' is invalid.</value>
   </data>
