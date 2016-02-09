@@ -18,8 +18,6 @@ namespace NuGet.CommandLine
         UsageSummaryResourceName = "PushCommandUsageSummary", UsageExampleResourceName = "PushCommandUsageExamples")]
     public class PushCommand : Command
     {
-        private PushCommandResource _pushCommandResource;
-
         [Option(typeof(NuGetCommand), "PushCommandSourceDescription", AltName = "src")]
         public string Source { get; set; }
 
@@ -38,11 +36,11 @@ namespace NuGet.CommandLine
             string packagePath = Arguments[0];
 
             string source = ResolveSource(packagePath, ConfigurationDefaults.Instance.DefaultPushSource);
-            await GetPushCommandResource(source);
+            var pushCommandResource = await GetPushCommandResource(source);
 
             try
             {
-                await _pushCommandResource.Push(packagePath,
+                await pushCommandResource.Push(packagePath,
                     source, 
                     Timeout,
                     endpoint => { return GetApiKey(endpoint); },
@@ -50,10 +48,6 @@ namespace NuGet.CommandLine
             }
             catch (Exception ex)
             {
-                if (ex is AggregateException && ex.InnerException != null)
-                {
-                    ex = ex.InnerException;
-                }
                 if (ex is HttpRequestException && ex.InnerException is WebException)
                 {
                     ex = ex.InnerException;
@@ -62,14 +56,14 @@ namespace NuGet.CommandLine
             }
         }
 
-        private async Task GetPushCommandResource(string source)
+        private async Task<PushCommandResource> GetPushCommandResource(string source)
         {
             var packageSource = new Configuration.PackageSource(source);
 
             var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
 
             var sourceRepository = sourceRepositoryProvider.CreateRepository(packageSource);
-            _pushCommandResource = await sourceRepository.GetResourceAsync<PushCommandResource>();
+            return await sourceRepository.GetResourceAsync<PushCommandResource>();
         }
 
         private string ResolveSource(string packagePath, string configurationDefaultPushSource = null)

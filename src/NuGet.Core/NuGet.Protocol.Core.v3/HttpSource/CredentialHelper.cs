@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+using System;
 using System.Net;
 
 namespace NuGet.Protocol
@@ -9,8 +12,31 @@ namespace NuGet.Protocol
     /// </summary>
     public class CredentialHelper : ICredentials
     {
-        public ICredentials Credentials { get; set; }
+        /// <summary>
+        /// Credentials can be changed by other threads, for this reason volatile
+        /// is added below so that the value is not cached anywhere.
+        /// </summary>
+        private volatile ICredentials _credentials;
 
+        /// <summary>
+        /// Latest credentials to be used.
+        /// </summary>
+        public ICredentials Credentials
+        {
+            get
+            {
+                return _credentials;
+            }
+
+            set
+            {
+                _credentials = value;
+            }
+        }
+
+        /// <summary>
+        /// Used by the HttpClientHandler to retrieve the current credentials.
+        /// </summary>
         public NetworkCredential GetCredential(Uri uri, string authType)
         {
             // Credentials may change during this call so keep a local copy.
@@ -25,6 +51,7 @@ namespace NuGet.Protocol
             }
             else
             {
+                // Get credentials from the current credential store.
                 result = currentCredentials.GetCredential(uri, authType);
             }
 
