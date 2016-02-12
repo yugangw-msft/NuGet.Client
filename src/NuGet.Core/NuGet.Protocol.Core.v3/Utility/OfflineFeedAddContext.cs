@@ -1,7 +1,8 @@
-﻿using System;
-using NuGet.ProjectManagement;
+﻿using NuGet.Protocol.Core.v3;
+using System;
+using System.Globalization;
 
-namespace NuGet.CommandLine
+namespace NuGet.Protocol.Core.Types
 {
     public class OfflineFeedAddContext
     {
@@ -24,12 +25,16 @@ namespace NuGet.CommandLine
         {
             if (string.IsNullOrEmpty(packagePath))
             {
-                throw new ArgumentException(Strings.Argument_Cannot_Be_Null_Or_Empty, nameof(packagePath));
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture,
+                    Strings.Argument_Cannot_Be_Null_Or_Empty,
+                    nameof(packagePath)));
             }
 
             if (string.IsNullOrEmpty(source))
             {
-                throw new ArgumentException(Strings.Argument_Cannot_Be_Null_Or_Empty, nameof(source));
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture,
+                    Strings.Argument_Cannot_Be_Null_Or_Empty, 
+                    nameof(source)));
             }
 
             if (logger == null)
